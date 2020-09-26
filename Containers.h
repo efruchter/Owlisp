@@ -14,6 +14,14 @@ struct OArray {
         return Arr[ Index ];
     }
 
+    T& Get( const int index ) {
+        return Arr[ index ];
+    }
+
+    const T& Get( const int index ) const {
+        return Arr[ index ];
+    }
+
     void Add( T V ) {
         Arr.push_back( V );
     }
@@ -28,5 +36,17 @@ struct OArray {
 
     int Length() const {
         return static_cast<int>( Arr.size() );
+    }
+
+    template<typename F>
+    void SwapOrSet( const T& t, F Predicate ) {
+        for ( int i = 0; i < Length(); i++ ) {
+            if ( Predicate( Get( i ) ) ) {
+                Get( i ) = t;
+                return;
+            }
+        }
+
+        Add( t );
     }
 };

@@ -18,13 +18,18 @@ struct OIntrinsic;
 
 typedef unsigned int uint;
 
-typedef shared_ptr<OExpr> OExprPtr;
-typedef shared_ptr<OMachine> OMachinePtr;
-typedef shared_ptr<OIntrinsic> OIntrinsicPtr;
+typedef OExpr* OExprPtr;
+typedef OMachine* OMachinePtr;
+typedef OIntrinsic* OIntrinsicPtr;
 
 typedef OArray<OExprPtr> OExprList;
 typedef OArray<OIntrinsicPtr> OIntrinsics;
 typedef function<OExprPtr( const OExprPtr )> IntrinsicFunction;
+
+enum class EEvalIntrinsicMode {
+    NoExecute,
+    Execute
+};
 
 enum class OExprType {
     // A C++ Function.
@@ -56,7 +61,10 @@ struct OExpr {
 struct OMachine {
     OIntrinsicPtr EmptyIntrinsic;
     OIntrinsics Intrinsics;
+    OExprList Memory;
 };
+
+OExprPtr EvalExpr( OMachinePtr Machine, OExprPtr Expr, EEvalIntrinsicMode EvalIntrinsicMode );
 
 OExprPtr Make_OExprPtr_Empty() {
     OExprPtr Ptr = OExprPtr( new OExpr{} );
@@ -113,11 +121,11 @@ void BuildIntrinsics( OMachinePtr Machine ) {
         const string Token_Print = "print";
         OIntrinsicPtr Intrinsic = Make_OIntriniscPtr( OExprType::Intrinsic );
         Intrinsic->Token = Token_Print;
-        Intrinsic->Function = [Token_Print]( const OExprPtr Expr ) {
+        Intrinsic->Function = [Token_Print, Machine]( const OExprPtr Expr ) {
             assert( Expr->Children.Length() > 0 );
             assert( Expr->Children[ 0 ]->Atom.Token == Token_Print );
             for ( int i = 1; i < Expr->Children.Length(); i++ ) {
-                cout << TrimEnclosingQuotes( Expr->Children[ i ]->Atom.Token );
+                cout << TrimEnclosingQuotes( EvalExpr( Machine, Expr->Children[ i ], EEvalIntrinsicMode::Execute )->Atom.Token );
             }
             return Make_OExprPtr_Empty();
         };
@@ -127,11 +135,14 @@ void BuildIntrinsics( OMachinePtr Machine ) {
         const string Token_Print = "println";
         OIntrinsicPtr Intrinsic = Make_OIntriniscPtr( OExprType::Intrinsic );
         Intrinsic->Token = Token_Print;
-        Intrinsic->Function = [Token_Print]( const OExprPtr Expr ) {
+        Intrinsic->Function = [Token_Print, Machine]( const OExprPtr Expr ) {
             assert( Expr->Children.Length() > 0 );
             assert( Expr->Children[ 0 ]->Atom.Token == Token_Print );
             for ( int i = 1; i < Expr->Children.Length(); i++ ) {
-                cout << TrimEnclosingQuotes( Expr->Children[ i ]->Atom.Token ) << endl;
+                cout << TrimEnclosingQuotes( EvalExpr( Machine, Expr->Children[ i ], EEvalIntrinsicMode::Execute )->Atom.Token ) << endl;
+            }
+            if ( Expr->Children.Length() == 1 ) {
+                cout << endl;
             }
             return Make_OExprPtr_Empty();
         };
@@ -142,13 +153,13 @@ void BuildIntrinsics( OMachinePtr Machine ) {
         const string Token_Addition = "+";
         OIntrinsicPtr Intrinsic = Make_OIntriniscPtr( OExprType::Intrinsic );
         Intrinsic->Token = Token_Addition;
-        Intrinsic->Function = [Token_Addition]( const OExprPtr Expr ) {
+        Intrinsic->Function = [Token_Addition, Machine]( const OExprPtr Expr ) {
             assert( Expr->Children.Length() > 0 );
             assert( Expr->Children[ 0 ]->Atom.Token == Token_Addition );
             int sum = 0;
             for ( int i = 1; i < Expr->Children.Length(); i++ ) {
                 stringstream Stream;
-                Stream << Expr->Children[ i ]->Atom.Token;
+                Stream << EvalExpr( Machine, Expr->Children[ i ], EEvalIntrinsicMode::Execute )->Atom.Token;
                 int a = 0;
                 Stream >> a;
                 sum += a;
@@ -166,14 +177,14 @@ void BuildIntrinsics( OMachinePtr Machine ) {
         const string Token_Sub = "-";
         OIntrinsicPtr Intrinsic = Make_OIntriniscPtr( OExprType::Intrinsic );
         Intrinsic->Token = Token_Sub;
-        Intrinsic->Function = [Token_Sub]( const OExprPtr Expr ) {
+        Intrinsic->Function = [Token_Sub, Machine]( const OExprPtr Expr ) {
             assert( Expr->Children.Length() > 0 );
             assert( Expr->Children[ 0 ]->Atom.Token == Token_Sub );
             int sum = 0;
             bool set = false;
             for ( int i = 1; i < Expr->Children.Length(); i++ ) {
                 stringstream Stream;
-                Stream << Expr->Children[ i ]->Atom.Token;
+                Stream << EvalExpr( Machine, Expr->Children[ i ], EEvalIntrinsicMode::Execute )->Atom.Token;
                 int a = 0;
                 Stream >> a;
                 if ( set ) {
@@ -196,14 +207,14 @@ void BuildIntrinsics( OMachinePtr Machine ) {
         const string Token_Mul = "*";
         OIntrinsicPtr Intrinsic = Make_OIntriniscPtr( OExprType::Intrinsic );
         Intrinsic->Token = Token_Mul;
-        Intrinsic->Function = [Token_Mul]( const OExprPtr Expr ) {
+        Intrinsic->Function = [Token_Mul, Machine]( const OExprPtr Expr ) {
             assert( Expr->Children.Length() > 0 );
             assert( Expr->Children[ 0 ]->Atom.Token == Token_Mul );
             float sum = 0;
             bool set = false;
             for ( int i = 1; i < Expr->Children.Length(); i++ ) {
                 stringstream Stream;
-                Stream << Expr->Children[ i ]->Atom.Token;
+                Stream << EvalExpr( Machine, Expr->Children[ i ], EEvalIntrinsicMode::Execute )->Atom.Token;
                 float a = 0;
                 Stream >> a;
                 if ( set ) {
@@ -226,14 +237,14 @@ void BuildIntrinsics( OMachinePtr Machine ) {
         const string Token_Div = "/";
         OIntrinsicPtr Intrinsic = Make_OIntriniscPtr( OExprType::Intrinsic );
         Intrinsic->Token = Token_Div;
-        Intrinsic->Function = [Token_Div]( const OExprPtr Expr ) {
+        Intrinsic->Function = [Token_Div, Machine]( const OExprPtr Expr ) {
             assert( Expr->Children.Length() > 0 );
             assert( Expr->Children[ 0 ]->Atom.Token == Token_Div );
             float sum = 1;
             bool set = false;
             for ( int i = 1; i < Expr->Children.Length(); i++ ) {
                 stringstream Stream;
-                Stream << Expr->Children[ i ]->Atom.Token;
+                Stream << EvalExpr( Machine, Expr->Children[ i ], EEvalIntrinsicMode::Execute )->Atom.Token;
                 float a = 0;
                 Stream >> a;
                 if ( set ) {
@@ -259,14 +270,14 @@ void BuildIntrinsics( OMachinePtr Machine ) {
         const string Token_IDiv = "//";
         OIntrinsicPtr Intrinsic = Make_OIntriniscPtr( OExprType::Intrinsic );
         Intrinsic->Token = Token_IDiv;
-        Intrinsic->Function = [Token_IDiv]( const OExprPtr Expr ) {
+        Intrinsic->Function = [Token_IDiv, Machine]( const OExprPtr Expr ) {
             assert( Expr->Children.Length() > 0 );
             assert( Expr->Children[ 0 ]->Atom.Token == Token_IDiv );
             int sum = 1;
             bool set = false;
             for ( int i = 1; i < Expr->Children.Length(); i++ ) {
                 stringstream Stream;
-                Stream << Expr->Children[ i ]->Atom.Token;
+                Stream << EvalExpr( Machine, Expr->Children[ i ], EEvalIntrinsicMode::Execute )->Atom.Token;
                 int a = 0;
                 Stream >> a;
                 if ( set ) {
@@ -284,6 +295,33 @@ void BuildIntrinsics( OMachinePtr Machine ) {
             SS << sum;
             Result->Atom.Token = SS.str();
             return Result;
+        };
+        Machine->Intrinsics.Add( Intrinsic );
+    }
+
+    { // Set
+        const string Token_Set = "set";
+        OIntrinsicPtr Intrinsic = Make_OIntriniscPtr( OExprType::Intrinsic );
+        Intrinsic->Token = Token_Set;
+        Intrinsic->Function = [Token_Set, Machine]( const OExprPtr Expr ) {
+            assert( Expr->Children.Length() == 3 );
+            assert( Expr->Children[ 0 ]->Atom.Token == Token_Set );
+            assert( Expr->Children[ 1 ]->Atom.Token != "" );
+
+            OExprPtr NewExpr = Make_OExprPtr( OExprType::Expr );
+            NewExpr->Children.Add( Expr->Children[ 1 ] );
+            NewExpr->Children.Add( EvalExpr( Machine, Expr->Children[ 2 ], EEvalIntrinsicMode::NoExecute ) );
+
+            Machine->Memory.SwapOrSet( NewExpr, [&]( const OExprPtr& ExistingExpr ) {
+                if ( ExistingExpr->Children.Length() == 2 ) {
+                    if ( ExistingExpr->Children[ 0 ]->Atom.Token == NewExpr->Children[ 0 ]->Atom.Token ) {
+                        return true;
+                    }
+                }
+                return false;
+            } );
+
+            return NewExpr;
         };
         Machine->Intrinsics.Add( Intrinsic );
     }
@@ -312,16 +350,33 @@ OExprPtr ConstructRootExpr( const TokenList& Tokens, int StartIndex, int EndInde
         return Make_OExprPtr_Data( Tokens[ StartIndex ] );
     }
 
-    if ( Tokens[ StartIndex ] != ExpStart
-        && Tokens[ EndIndex ] != ExpEnd ) {
-        OExprPtr Root = Make_OExprPtr( OExprType::Expr );
-
+    // Check if no more expansion is needed.
+    { 
+        bool IsLeaf = true;
+        bool InLiteral = false;
         for ( int i = StartIndex; i <= EndIndex; i++ ) {
-            Root->Children.Add( Make_OExprPtr_Data( Tokens[ i ] ) );
+            if ( !InLiteral && Tokens[ i ] == StrLit ) {
+                InLiteral = true;
+            } else if ( InLiteral && Tokens[ i ] == StrLit ) {
+                InLiteral = false;
+            } else if ( !InLiteral && ( Tokens[ i ] == ExpStart || Tokens[ i ] == ExpEnd ) ) {
+                IsLeaf = false;
+                break;
+            }
         }
 
-        return Root;
+        if ( IsLeaf ) {
+            OExprPtr Root = Make_OExprPtr( OExprType::Expr );
+
+            for ( int i = StartIndex; i <= EndIndex; i++ ) {
+                Root->Children.Add( Make_OExprPtr_Data( Tokens[ i ] ) );
+            }
+
+            return Root;
+        }
     }
+
+    // Needs more expension
 
     OExprPtr Root = Make_OExprPtr( OExprType::Expr );
 
@@ -347,6 +402,8 @@ OExprPtr ConstructRootExpr( const TokenList& Tokens, int StartIndex, int EndInde
         }
     }
 
+    assert( OpenBracketCount == 0 );
+
     return Root;
 }
 
@@ -354,28 +411,47 @@ OExprPtr ConstructRootExpr( const TokenList& Tokens ) {
     return ConstructRootExpr( Tokens, 0, Tokens.Length() - 1 );
 }
 
-OExprPtr EvalExpr( OMachinePtr Machine, OExprPtr Expr ) {
+OExprPtr EvalInMemory( const OMachinePtr Machine, const OExprPtr Expr, EEvalIntrinsicMode EvalIntrinsicMode ) {
+    for ( int i = 0; i < Machine->Memory.Length(); i++ ) {
+        if ( Machine->Memory[ i ]->Children.Length() == 1 ) {
+            if ( Machine->Memory[ i ]->Children[ 0 ]->Atom.Token == Expr->Atom.Token ) {
+                return EvalExpr( Machine, Machine->Memory[ i ]->Children[ 0 ], EvalIntrinsicMode );
+            }
+        } else if ( Machine->Memory[ i ]->Children.Length() == 2 ) {
+            if ( Machine->Memory[ i ]->Children[ 0 ]->Atom.Token == Expr->Atom.Token ) {
+                return EvalExpr( Machine, Machine->Memory[ i ]->Children[ 1 ], EvalIntrinsicMode );
+            }
+        }
+    }
+    return Expr;
+}
+
+OExprPtr EvalExpr( OMachinePtr Machine, OExprPtr Expr, EEvalIntrinsicMode EvalIntrinsicMode ) {
     if ( Expr->Type == OExprType::Data ) {
-        return Expr;
+        return EvalInMemory( Machine, Expr, EvalIntrinsicMode );
     }
 
     if ( Expr->Type == OExprType::Expr ) {
         for ( int i = 1; i < Expr->Children.Length(); i++ ) {
             if ( Expr->Children[ i ]->Type == OExprType::Expr ) {
-                Expr->Children[ i ]->Atom = EvalExpr( Machine, Expr->Children[ i ] )->Atom;
+                Expr->Children[ i ]->Atom = EvalExpr( Machine, Expr->Children[ i ], EvalIntrinsicMode )->Atom;
             }
         }
 
-        OIntrinsicPtr Intrinsic = FindIntrinsic( Machine, Expr );
-        if ( Intrinsic != Machine->EmptyIntrinsic ) {
-            return Intrinsic->Function( Expr );
+        if ( EvalIntrinsicMode == EEvalIntrinsicMode::Execute ) {
+            OIntrinsicPtr Intrinsic = FindIntrinsic( Machine, Expr );
+            if ( Intrinsic != Machine->EmptyIntrinsic ) {
+                return Intrinsic->Function( Expr );
+            }
+        } else {
+            return Expr;
         }
     }
 
     return Make_OExprPtr_Empty();
 }
 
-void ResetMachine( OMachinePtr Machine) {
+void ResetMachine( OMachinePtr Machine ) {
     *Machine = {};
     BuildIntrinsics( Machine );
 }
@@ -385,21 +461,33 @@ int main() {
     ResetMachine( Machine );
 
     const string ToParse1 =
-        "  [println \"Hello World!\"]  ";
+        "  (println `ABC` `EFG`)  ";
 
     const string ToParse2 =
-        " [ + 1 8 7 ] "; // 
+        " ( set X 3 ) "
+        " ( set Y 4 ) "
+        " (println (+ (* X Y ) ( Y ) ) ) ";
 
     const string ToParse3 =
-        " [println \"Aww yus, time to Eval..\"] "
-        " [println [+ 1 8 [* 9 2]]] "; // 27
+        " (set CurrentYear 2020)"
+        " (set FoundingYear 1776)"
+        " (set AvgGenerationLength 30) "
+        " (print `Generations since founding: ` (/ (- CurrentYear FoundingYear) AvgGenerationLength) `\n`) "
+        ;
 
     const TokenList Tokens = Tokenize( ToParse3 );
-    const OExprPtr Program = ConstructRootExpr( Tokens );
 
+    //cout << "Tokens:" << endl;
+    //for ( int i = 0; i < Tokens.Length(); i++ ) {
+    //    cout << Tokens[ i ] << endl;
+    //}
+    //cout << endl << endl << "Output:" << endl << endl;
+
+    const OExprPtr Program = ConstructRootExpr( Tokens );
     assert( Program->Type == OExprType::ExprList );
+
     for ( int i = 0; i < Program->Children.Length(); i++ ) {
-        EvalExpr( Machine, Program->Children[ i ] );
+        EvalExpr( Machine, Program->Children[ i ], EEvalIntrinsicMode::Execute );
     }
 }
 

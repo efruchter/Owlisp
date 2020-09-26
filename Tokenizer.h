@@ -7,9 +7,9 @@
 
 using namespace std;
 
-const string ExpStart = "[";
-const string ExpEnd = "]";
-const string StrLit = "\"";
+const string ExpStart = "(";
+const string ExpEnd = ")";
+const string StrLit = "`";
 const string WhitespaceTokens[] = { " ", "\t", "\n", "\r" };
 
 typedef OArray<string> TokenList;
@@ -91,7 +91,7 @@ TokenList Tokenize( const string& Input ) {
 
 string TrimEnclosingQuotes( const string& In ) {
     if ( In.size() >= 2 && In[ 0 ] == StrLit[ 0 ] && In[ In.size() - 1 ] == StrLit[ 0 ] ) {
-        return In.substr( 1, In.size() - 1 );
+        return In.substr( 1, In.size() - 2 );
     }
 
     return In;
