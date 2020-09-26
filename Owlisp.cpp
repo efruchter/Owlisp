@@ -6,12 +6,10 @@
 #include <functional>
 #include <sstream>
 
-using namespace std;
+#include "Containers.h"
+#include "Tokenizer.h"
 
-const string ExpStart = "[";
-const string ExpEnd = "]";
-const string StrLit = "\"";
-const vector<string> WhitespaceTokens = { " ", "\t", "\n", "\r" };
+using namespace std;
 
 struct OExpr;
 struct OAtom;
@@ -19,18 +17,30 @@ struct OMachine;
 struct OIntrinsic;
 
 typedef unsigned int uint;
-typedef vector<OExpr*> OExprList;
-typedef vector<OIntrinsic*> OIntrinsics;
+
+typedef shared_ptr<OExpr> OExprPtr;
+typedef shared_ptr<OMachine> OMachinePtr;
+typedef shared_ptr<OIntrinsic> OIntrinsicPtr;
+
+typedef OArray<OExprPtr> OExprList;
+typedef OArray<OIntrinsicPtr> OIntrinsics;
+typedef function<OExprPtr( const OExprPtr )> IntrinsicFunction;
 
 enum class OExprType {
-    Func,
+    // A C++ Function.
+    Intrinsic,
+    // An evaluatable expression root
     Expr,
-    Data
+    // Data, cannot be expanded.
+    Data,
+    // List of Expr
+    ExprList
 };
 
 struct OIntrinsic {
+    OExprType Type;
     string Token;
-    function<OExpr* ( OExpr* )> Function;
+    IntrinsicFunction Function;
 };
 
 struct OAtom {
@@ -41,200 +51,355 @@ struct OExpr {
     OExprType Type;
     OAtom Atom;
     OExprList Children;
-
-    OExpr( OExprType Type ) : Type( Type ) {
-
-    }
 };
 
 struct OMachine {
+    OIntrinsicPtr EmptyIntrinsic;
     OIntrinsics Intrinsics;
-    OExprList GlobalExpressions;
 };
 
-int CountOf( const string& Input, char Token ) {
-    int Count = 0;
-    for ( char C : Input ) {
-        if ( C == Token )
-            Count++;
-    }
-    return Count;
+OExprPtr Make_OExprPtr_Empty() {
+    OExprPtr Ptr = OExprPtr( new OExpr{} );
+    assert( Ptr != nullptr );
+    Ptr->Type = OExprType::Data;
+    return Ptr;
 }
 
-int IndexOf( const string& Input, char Token ) {
-    int Index = -1;
-    for ( char C : Input ) {
-        Index++;
-        if ( C == Token )
-            return Index;
-    }
-    return -1;
+OExprPtr Make_OExprPtr( const OExprType Type ) {
+    OExprPtr Ptr = OExprPtr( new OExpr{} );
+    assert( Ptr != nullptr );
+    Ptr->Type = Type;
+    return Ptr;
 }
 
-bool Contains( const string& Input, char Token ) {
-    return IndexOf( Input, Token ) != -1;
+OExprPtr Make_OExprPtr_Data( const string& Token ) {
+    OExprPtr AtomExpr = Make_OExprPtr( OExprType::Data );
+    AtomExpr->Atom.Token = Token;
+    return AtomExpr;
 }
 
-bool IsWhiteSpace( const string& Token ) {
-    for ( const auto& WS : WhitespaceTokens ) {
-        if ( Token == WS )
-            return true;
-    }
-    return false;
+OIntrinsicPtr Make_OIntriniscPtr( const OExprType Type ) {
+    OIntrinsicPtr Ptr = OIntrinsicPtr( new OIntrinsic{} );
+    assert( Ptr != nullptr );
+    Ptr->Type = Type;
+    return Ptr;
 }
 
-vector<string> Tokenize( const string& Input ) {
-    vector<string> Tokens;
-    string Token;
-    bool WithinStrLiteral = false;
-    for ( char RawChar : Input ) {
-        const string Char{ RawChar };
-        if ( !WithinStrLiteral && Char == StrLit ) {
-            WithinStrLiteral = true;
-            Token += Char;
-        } else if ( WithinStrLiteral && Char == StrLit ) {
-            WithinStrLiteral = false;
-            Token += Char;
-            Tokens.push_back( Token );
-            Token = "";
-        } else if ( WithinStrLiteral ) {
-            Token += Char;
-        } else if ( Char == ExpStart ) {
-            if ( Token.size() > 0 ) {
-                Tokens.push_back( Token );
-                Token = "";
-            }
-            Token += Char;
-            Tokens.push_back( Token );
-            Token = "";
-        } else if ( Char == ExpEnd ) {
-            if ( Token.size() > 0 ) {
-                Tokens.push_back( Token );
-                Token = "";
-            }
-            Token += Char;
-            Tokens.push_back( Token );
-            Token = "";
-        } else if ( IsWhiteSpace( Char ) ) {
-            if ( Token.size() > 0 ) {
-                Tokens.push_back( Token );
-                Token = "";
-            }
-        } else {
-            Token += Char;
-        }
-    }
-    return Tokens;
+OMachinePtr Make_OMachinePtr() {
+    OMachinePtr Ptr = OMachinePtr( new OMachine{} );
+    assert( Ptr != nullptr );
+    return Ptr;
 }
 
-OExpr* ToOExpr_SingleNoEval( vector<string>& Tokens ) {
-    OExpr* Expr = new OExpr{ OExprType::Expr };
+OExprPtr ToOExpr_SingleNoEval( const TokenList& Tokens ) {
+    OExprPtr Expr = Make_OExprPtr( OExprType::Expr );
 
-    for ( uint i = 1; i < Tokens.size() - 1; i++ ) {
-        OExpr* Atom = new OExpr{ OExprType::Data };
-        Atom->Atom.Token = Tokens[ i ];
-        Expr->Children.push_back( Atom );
+    for ( int i = 1; i < Tokens.Length() - 1; i++ ) {
+        Expr->Children.Add( Make_OExprPtr_Data( Tokens[ i ] ) );
     }
 
     return Expr;
 }
 
-void BuildIntrinsics( OMachine& Machine ) {
+void BuildIntrinsics( OMachinePtr Machine ) {
+    { // Empty Intrinsic
+        Machine->EmptyIntrinsic = Make_OIntriniscPtr( OExprType::Intrinsic );
+        Machine->EmptyIntrinsic->Function = []( const OExprPtr Expr ) {
+            return Make_OExprPtr_Empty();
+        };
+    }
+
     { // print
         const string Token_Print = "print";
-        OIntrinsic* Intrinsic = new OIntrinsic{};
+        OIntrinsicPtr Intrinsic = Make_OIntriniscPtr( OExprType::Intrinsic );
         Intrinsic->Token = Token_Print;
-        Intrinsic->Function = [Token_Print]( const OExpr* Expr ) {
-            assert( Expr->Children.size() > 0 );
+        Intrinsic->Function = [Token_Print]( const OExprPtr Expr ) {
+            assert( Expr->Children.Length() > 0 );
             assert( Expr->Children[ 0 ]->Atom.Token == Token_Print );
-            for ( uint i = 1; i < Expr->Children.size(); i++ ) {
-                cout << Expr->Children[ i ]->Atom.Token.substr( 1, Expr->Children[ i ]->Atom.Token.size() - 2 );
+            for ( int i = 1; i < Expr->Children.Length(); i++ ) {
+                cout << TrimEnclosingQuotes( Expr->Children[ i ]->Atom.Token );
             }
-            return new OExpr{ OExprType::Data };
+            return Make_OExprPtr_Empty();
         };
-        Machine.Intrinsics.push_back( Intrinsic );
+        Machine->Intrinsics.Add( Intrinsic );
     }
-    { // print
+    { // println
         const string Token_Print = "println";
-        OIntrinsic* Intrinsic = new OIntrinsic{};
+        OIntrinsicPtr Intrinsic = Make_OIntriniscPtr( OExprType::Intrinsic );
         Intrinsic->Token = Token_Print;
-        Intrinsic->Function = [Token_Print]( const OExpr* Expr ) {
-            assert( Expr->Children.size() > 0 );
+        Intrinsic->Function = [Token_Print]( const OExprPtr Expr ) {
+            assert( Expr->Children.Length() > 0 );
             assert( Expr->Children[ 0 ]->Atom.Token == Token_Print );
-            for ( uint i = 1; i < Expr->Children.size(); i++ ) {
-                cout << Expr->Children[ i ]->Atom.Token.substr( 1, Expr->Children[ i ]->Atom.Token.size() - 2 ) << endl;
+            for ( int i = 1; i < Expr->Children.Length(); i++ ) {
+                cout << TrimEnclosingQuotes( Expr->Children[ i ]->Atom.Token ) << endl;
             }
-            return new OExpr{ OExprType::Data };
+            return Make_OExprPtr_Empty();
         };
-        Machine.Intrinsics.push_back( Intrinsic );
+        Machine->Intrinsics.Add( Intrinsic );
     }
+
     { // +
         const string Token_Addition = "+";
-        OIntrinsic* Intrinsic = new OIntrinsic{};
+        OIntrinsicPtr Intrinsic = Make_OIntriniscPtr( OExprType::Intrinsic );
         Intrinsic->Token = Token_Addition;
-        Intrinsic->Function = [Token_Addition]( const OExpr* Expr ) {
-            assert( Expr->Children.size() > 0 );
+        Intrinsic->Function = [Token_Addition]( const OExprPtr Expr ) {
+            assert( Expr->Children.Length() > 0 );
             assert( Expr->Children[ 0 ]->Atom.Token == Token_Addition );
             int sum = 0;
-            for ( uint i = 1; i < Expr->Children.size(); i++ ) {
+            for ( int i = 1; i < Expr->Children.Length(); i++ ) {
                 stringstream Stream;
                 Stream << Expr->Children[ i ]->Atom.Token;
                 int a = 0;
                 Stream >> a;
                 sum += a;
             }
-            OExpr* Result = new OExpr{ OExprType::Data };
-            stringstream SS;
+            OExprPtr Result = Make_OExprPtr( OExprType::Data );
+            stringstream SS{};
             SS << sum;
             Result->Atom.Token = SS.str();
             return Result;
         };
-        Machine.Intrinsics.push_back( Intrinsic );
+        Machine->Intrinsics.Add( Intrinsic );
+    }
+
+    { // -
+        const string Token_Sub = "-";
+        OIntrinsicPtr Intrinsic = Make_OIntriniscPtr( OExprType::Intrinsic );
+        Intrinsic->Token = Token_Sub;
+        Intrinsic->Function = [Token_Sub]( const OExprPtr Expr ) {
+            assert( Expr->Children.Length() > 0 );
+            assert( Expr->Children[ 0 ]->Atom.Token == Token_Sub );
+            int sum = 0;
+            bool set = false;
+            for ( int i = 1; i < Expr->Children.Length(); i++ ) {
+                stringstream Stream;
+                Stream << Expr->Children[ i ]->Atom.Token;
+                int a = 0;
+                Stream >> a;
+                if ( set ) {
+                    sum -= a;
+                } else {
+                    set = true;
+                    sum = a;
+                }
+            }
+            OExprPtr Result = Make_OExprPtr( OExprType::Data );
+            stringstream SS{};
+            SS << sum;
+            Result->Atom.Token = SS.str();
+            return Result;
+        };
+        Machine->Intrinsics.Add( Intrinsic );
+    }
+
+    { // * Multiplication
+        const string Token_Mul = "*";
+        OIntrinsicPtr Intrinsic = Make_OIntriniscPtr( OExprType::Intrinsic );
+        Intrinsic->Token = Token_Mul;
+        Intrinsic->Function = [Token_Mul]( const OExprPtr Expr ) {
+            assert( Expr->Children.Length() > 0 );
+            assert( Expr->Children[ 0 ]->Atom.Token == Token_Mul );
+            float sum = 0;
+            bool set = false;
+            for ( int i = 1; i < Expr->Children.Length(); i++ ) {
+                stringstream Stream;
+                Stream << Expr->Children[ i ]->Atom.Token;
+                float a = 0;
+                Stream >> a;
+                if ( set ) {
+                    sum *= a;
+                } else {
+                    sum = a;
+                    set = true;
+                }
+            }
+            OExprPtr Result = Make_OExprPtr( OExprType::Data );
+            stringstream SS{};
+            SS << sum;
+            Result->Atom.Token = SS.str();
+            return Result;
+        };
+        Machine->Intrinsics.Add( Intrinsic );
+    }
+
+    { // / Floating Point Division
+        const string Token_Div = "/";
+        OIntrinsicPtr Intrinsic = Make_OIntriniscPtr( OExprType::Intrinsic );
+        Intrinsic->Token = Token_Div;
+        Intrinsic->Function = [Token_Div]( const OExprPtr Expr ) {
+            assert( Expr->Children.Length() > 0 );
+            assert( Expr->Children[ 0 ]->Atom.Token == Token_Div );
+            float sum = 1;
+            bool set = false;
+            for ( int i = 1; i < Expr->Children.Length(); i++ ) {
+                stringstream Stream;
+                Stream << Expr->Children[ i ]->Atom.Token;
+                float a = 0;
+                Stream >> a;
+                if ( set ) {
+                    sum = sum / a;
+                } else {
+                    sum = a;
+                    set = true;
+                }
+            }
+            if ( !set ) {
+                sum = 0;
+            }
+            OExprPtr Result = Make_OExprPtr( OExprType::Data );
+            stringstream SS{};
+            SS << sum;
+            Result->Atom.Token = SS.str();
+            return Result;
+        };
+        Machine->Intrinsics.Add( Intrinsic );
+    }
+
+    { // // Integer Division
+        const string Token_IDiv = "//";
+        OIntrinsicPtr Intrinsic = Make_OIntriniscPtr( OExprType::Intrinsic );
+        Intrinsic->Token = Token_IDiv;
+        Intrinsic->Function = [Token_IDiv]( const OExprPtr Expr ) {
+            assert( Expr->Children.Length() > 0 );
+            assert( Expr->Children[ 0 ]->Atom.Token == Token_IDiv );
+            int sum = 1;
+            bool set = false;
+            for ( int i = 1; i < Expr->Children.Length(); i++ ) {
+                stringstream Stream;
+                Stream << Expr->Children[ i ]->Atom.Token;
+                int a = 0;
+                Stream >> a;
+                if ( set ) {
+                    sum = sum / a;
+                } else {
+                    sum = a;
+                    set = true;
+                }
+            }
+            if ( !set ) {
+                sum = 0;
+            }
+            OExprPtr Result = Make_OExprPtr( OExprType::Data );
+            stringstream SS{};
+            SS << sum;
+            Result->Atom.Token = SS.str();
+            return Result;
+        };
+        Machine->Intrinsics.Add( Intrinsic );
     }
 }
 
-const OIntrinsic* FindIntrinsic( const OMachine* Machine, const OExpr* Expr )     {
-    for ( const OIntrinsic* const Intrinsic : Machine->Intrinsics ) {
-        if ( Intrinsic->Token == Expr->Children[ 0 ]->Atom.Token ) {
-            return Intrinsic;
+const OIntrinsicPtr FindIntrinsic( const OMachinePtr Machine, const OExprPtr Expr ) {
+    for ( int i = 0; i < Machine->Intrinsics.Length(); i++ ) {
+        if ( Machine->Intrinsics[ i ]->Token == Expr->Children[ 0 ]->Atom.Token ) {
+            return Machine->Intrinsics[ i ];
+        }
+    }
+    return Machine->EmptyIntrinsic;
+}
+
+const OIntrinsicPtr FindFunc( const OMachinePtr Machine, const OExprPtr Expr ) {
+    for ( int i = 0; i < Machine->Intrinsics.Length(); i++ ) {
+        if ( Machine->Intrinsics[ i ]->Token == Expr->Children[ 0 ]->Atom.Token ) {
+            return Machine->Intrinsics[ i ];
         }
     }
     return nullptr;
 }
 
-const OIntrinsic* FindFunc( const OMachine* Machine, const OExpr* Expr ) {
-    for ( const OIntrinsic* const Intrinsic : Machine->Intrinsics ) {
-        if ( Intrinsic->Token == Expr->Children[ 0 ]->Atom.Token ) {
-            return Intrinsic;
+OExprPtr ConstructRootExpr( const TokenList& Tokens, int StartIndex, int EndIndex ) {
+    if ( StartIndex == EndIndex ) {
+        return Make_OExprPtr_Data( Tokens[ StartIndex ] );
+    }
+
+    if ( Tokens[ StartIndex ] != ExpStart
+        && Tokens[ EndIndex ] != ExpEnd ) {
+        OExprPtr Root = Make_OExprPtr( OExprType::Expr );
+
+        for ( int i = StartIndex; i <= EndIndex; i++ ) {
+            Root->Children.Add( Make_OExprPtr_Data( Tokens[ i ] ) );
+        }
+
+        return Root;
+    }
+
+    OExprPtr Root = Make_OExprPtr( OExprType::Expr );
+
+    if ( StartIndex == 0 && EndIndex == Tokens.Length() - 1 ) {
+        Root->Type = OExprType::ExprList;
+    }
+
+    int InitBracketIndex = 0;
+    int OpenBracketCount = 0;
+    for ( int i = StartIndex; i <= EndIndex; i++ ) {
+        if ( Tokens[ i ] == ExpStart ) {
+            if ( OpenBracketCount == 0 ) {
+                InitBracketIndex = i;
+            }
+            OpenBracketCount++;
+        } else if ( Tokens[ i ] == ExpEnd ) {
+            OpenBracketCount--;
+            if ( OpenBracketCount == 0 ) {
+                Root->Children.Add( ConstructRootExpr( Tokens, InitBracketIndex + 1, i - 1 ) );
+            }
+        } else if ( OpenBracketCount == 0 ) {
+            Root->Children.Add( Make_OExprPtr_Data( Tokens[ i ] ) );
         }
     }
-    return nullptr;
+
+    return Root;
+}
+
+OExprPtr ConstructRootExpr( const TokenList& Tokens ) {
+    return ConstructRootExpr( Tokens, 0, Tokens.Length() - 1 );
+}
+
+OExprPtr EvalExpr( OMachinePtr Machine, OExprPtr Expr ) {
+    if ( Expr->Type == OExprType::Data ) {
+        return Expr;
+    }
+
+    if ( Expr->Type == OExprType::Expr ) {
+        for ( int i = 1; i < Expr->Children.Length(); i++ ) {
+            if ( Expr->Children[ i ]->Type == OExprType::Expr ) {
+                Expr->Children[ i ]->Atom = EvalExpr( Machine, Expr->Children[ i ] )->Atom;
+            }
+        }
+
+        OIntrinsicPtr Intrinsic = FindIntrinsic( Machine, Expr );
+        if ( Intrinsic != Machine->EmptyIntrinsic ) {
+            return Intrinsic->Function( Expr );
+        }
+    }
+
+    return Make_OExprPtr_Empty();
+}
+
+void ResetMachine( OMachinePtr Machine) {
+    *Machine = {};
+    BuildIntrinsics( Machine );
 }
 
 int main() {
-    OMachine Machine;
-    BuildIntrinsics( Machine );
+    OMachinePtr Machine = Make_OMachinePtr();
+    ResetMachine( Machine );
 
     const string ToParse1 =
         "  [println \"Hello World!\"]  ";
 
     const string ToParse2 =
-        " [+ 1 2 3] ";
+        " [ + 1 8 7 ] "; // 
 
     const string ToParse3 =
-        " [println [+ 1 2]]";
+        " [println \"Aww yus, time to Eval..\"] "
+        " [println [+ 1 8 [* 9 2]]] "; // 27
 
-    auto Tokens = Tokenize( ToParse2 );
+    const TokenList Tokens = Tokenize( ToParse3 );
+    const OExprPtr Program = ConstructRootExpr( Tokens );
 
-    OExpr* PrintExpr = ToOExpr_SingleNoEval( Tokens );
-
-    auto Func = FindIntrinsic( &Machine, PrintExpr );
-    auto Res = Func->Function( PrintExpr );
-
-    cout << Res->Atom.Token << endl;
-
-    //for ( const auto& Token : Tokens ) {
-    //    cout << Token << endl;
-    //}
+    assert( Program->Type == OExprType::ExprList );
+    for ( int i = 0; i < Program->Children.Length(); i++ ) {
+        EvalExpr( Machine, Program->Children[ i ] );
+    }
 }
 
