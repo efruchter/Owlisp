@@ -5,6 +5,7 @@
 #include <assert.h>
 #include <functional>
 #include <sstream>
+#include <fstream>
 
 #include "Containers.h"
 #include "Tokenizer.h"
@@ -496,37 +497,32 @@ int main(int argc, char *argv[]) {
 	ResetMachine( Machine );
 
 	if ( argc > 1 ) {
-		if ( string{ argv[1] } == "-i" ) {
+
+		const string arg1{ argv[1] };
+
+		if ( arg1 == "-i" ) {
 			InterpreterLoop( Machine );
 			return 0;
 		}
+
+		// Compile the file arg1
+		std::ifstream inFile;
+		inFile.open( arg1 ); //open the input file
+
+		std::stringstream strStream;
+		strStream << inFile.rdbuf(); //read the file
+		std::string Input = strStream.str();
+
+		const TokenList Tokens = Tokenize( Input );
+		const OExprPtr Program = ConstructRootExpr( Tokens );
+		Execute( Machine, Program );
+
+		//cout << "Tokens:" << endl;
+		//for ( int i = 0; i < Tokens.Length(); i++ ) {
+		//    cout << Tokens[ i ] << endl;
+		//}
+		//cout << endl << endl << "Output:" << endl << endl;
 	}
-
-	const string ToParse1 =
-		"  (println `ABC` `EFG`)  ";
-
-	const string ToParse2 =
-		" ( set X 3 ) "
-		" ( set Y 4 ) "
-		" (println (+ (* X Y ) ( Y ) ) ) ";
-
-	const string ToParse3 =
-		" (set CurrentYear 2020)"
-		" (set FoundingYear 1776)"
-		" (set AvgGenerationLength 30) "
-		" (print `Generations since founding: ` (/ (- CurrentYear FoundingYear) AvgGenerationLength) `\n`) "
-		;
-
-	const TokenList Tokens = Tokenize( ToParse3 );
-	const OExprPtr Program = ConstructRootExpr( Tokens );
-	Execute( Machine, Program );
-
-	//cout << "Tokens:" << endl;
-	//for ( int i = 0; i < Tokens.Length(); i++ ) {
-	//    cout << Tokens[ i ] << endl;
-	//}
-	//cout << endl << endl << "Output:" << endl << endl;
-	
 	return 0;
 }
 

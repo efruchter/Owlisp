@@ -1,1 +1,6 @@
 (println `Hello World!`)
+(set Res
+	(+ 4 8 7 1)
+)
+(println Res)
+
