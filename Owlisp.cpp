@@ -468,6 +468,9 @@ void ResetMachine( OMachinePtr Machine ) {
 
 OExprPtr Execute( OMachinePtr Machine, OExprPtr Program ) {
 	if ( Program->Type == OExprType::ExprList ) {
+		if ( Program->Children.Length() == 1 ) {
+			return EvalExpr( Machine, Program->Children[0], EEvalIntrinsicMode::Execute );
+		}
 		for ( int i = 0; i < Program->Children.Length(); i++ ) {
 			EvalExpr( Machine, Program->Children[ i ], EEvalIntrinsicMode::Execute );
 		}
