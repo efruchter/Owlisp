@@ -1,1 +1,1 @@
-An unoriginal name for an interpreter!
+A tiny programming langauge based on lisp's s-expr style.
