@@ -1,6 +1,11 @@
-(println `Hello World!`)
+(println `Hello world!`)
 (set Res
-	(+ 4 8 7 1)
+	(+ 5 4 3 2 1)
 )
-(println Res)
+(println	(*	45
+				(/ 3 4)
+				(// 10 5)
+				Res
+			)
+)
 

@@ -143,7 +143,11 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Containers.h" />
+    <ClInclude Include="IO.h" />
     <ClInclude Include="Tokenizer.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="main.owl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

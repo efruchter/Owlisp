@@ -2,6 +2,20 @@
 
 #include <vector>
 
+template<typename T, typename E>
+struct Return {
+    T Out;
+    bool ErrorOccured;
+    E Error;
+
+    Return( T& Out ) : Out( Out ), ErrorOccured( false ), Error() {};
+    Return( T&& Out ) : Out( Out ), ErrorOccured( false ), Error() {};
+    Return( T& Out, E& Error ) : Out( Out ), ErrorOccured( true ), Error( Error ) {};
+    Return( T& Out, E&& Error ) : Out( Out ), ErrorOccured( true ), Error( Error ) {};
+    Return( T&& Out, E& Error ) : Out( Out ), ErrorOccured( true ), Error( Error ) {};
+    Return( T&& Out, E&& Error ) : Out( Out ), ErrorOccured( true ), Error( Error ) {};
+};
+
 template <typename T>
 struct OArray {
     std::vector<T> Arr;
