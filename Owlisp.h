@@ -33,14 +33,16 @@ enum class EEvalIntrinsicMode {
 };
 
 enum class OExprType {
-    // A C++ Function.
-    Intrinsic,
+    // A native implemented Function. Will have a function pointer.
+    NativeFunction,
     // An evaluatable expression root
     Expr,
     // Data, cannot be expanded.
     Data,
     // List of Expr
-    ExprList
+    ExprList,
+    // A function, needs own stack frame w. parameters loaded into it.
+    ExprFunc
 };
 
 struct OIntrinsic {

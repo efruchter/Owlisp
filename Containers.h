@@ -9,6 +9,7 @@ struct Return {
     bool ErrorOccured;
     E Error;
 
+    bool IsGood() { return !ErrorOccured; };
     Return( T& Out ) : Out( Out ), ErrorOccured( false ), Error() {};
     Return( T&& Out ) : Out( Out ), ErrorOccured( false ), Error() {};
     Return( T& Out, E& Error ) : Out( Out ), ErrorOccured( true ), Error( Error ) {};
@@ -37,12 +38,28 @@ struct OArray {
         return Arr[ index ];
     }
 
-    void Add( T V ) {
+    void Add( const T& V ) {
         Arr.push_back( V );
     }
 
-    void PushStack( T V ) {
+    void Add( T& V ) {
         Arr.push_back( V );
+    }
+
+    void Add( T&& V ) {
+        Arr.emplace_back( V );
+    }
+
+    void Add() {
+        Add( {} );
+    }
+
+    void PushStack( T& V ) {
+        Arr.push_back( V );
+    }
+
+    void PushStack( T&& V ) {
+        Arr.emplace_back( V );
     }
 
     void PushStack() {
@@ -50,6 +67,7 @@ struct OArray {
     }
 
     T PopStack() {
+        assert( Arr.size() >= 1 );
         T Out = PeekStack();
         Arr.pop_back();
         return Out;
@@ -69,9 +87,9 @@ struct OArray {
     }
 
     template<typename F>
-    void SwapOrSet( const T& Element, F SwapIfTrue ) {
+    void SetOrAdd( const T& Element, F SetFirstIfTrue ) {
         for ( int i = 0; i < Length(); i++ ) {
-            if ( SwapIfTrue( Get( i ) ) ) {
+            if ( SetFirstIfTrue( Get( i ) ) ) {
                 Get( i ) = Element;
                 return;
             }
