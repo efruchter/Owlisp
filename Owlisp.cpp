@@ -1,81 +1,38 @@
-#include <iostream>
-#include <string>
-#include <vector>
-#include <memory>
-#include <assert.h>
-#include <functional>
-#include <sstream>
-#include <fstream>
-
-#include "Containers.h"
-#include "Tokenizer.h"
-#include "IO.h"
-
 #define MANAGE_EXPR_MEM 1
+#define PRINT_TOKENS 0
 
-using namespace std;
+#include "Owlisp.h"
+#include <iostream>
 
-struct OExpr;
-struct OAtom;
-struct OMachine;
-struct OIntrinsic;
+int main( int argc, char* argv[] ) {
+    OMachinePtr Machine = Make_OMachinePtr();
+    ResetMachine( Machine );
 
-typedef unsigned int uint;
+    if ( argc > 1 ) {
+        const string arg1{ argv[ 1 ] };
 
-#if MANAGE_EXPR_MEM
-typedef shared_ptr<OExpr> OExprPtr;
-typedef shared_ptr<OMachine> OMachinePtr;
-typedef shared_ptr<OIntrinsic> OIntrinsicPtr;
-#else
-typedef OExpr* OExprPtr;
-typedef OMachine* OMachinePtr;
-typedef OIntrinsic* OIntrinsicPtr;
-#endif
+        if ( arg1 == "-i" ) {
+            InterpreterLoop( Machine );
+            return 0;
+        }
 
-typedef OArray<OExprPtr> OExprList;
-typedef OArray<OIntrinsicPtr> OIntrinsics;
-typedef function<OExprPtr( const OExprPtr )> IntrinsicFunction;
+        // Compile the file arg1
+        auto InputRet = ReadFileIntoString( arg1 );
 
-enum class EEvalIntrinsicMode {
-    NoExecute,
-    Execute
-};
+        if ( InputRet.ErrorOccured ) {
+            std::cerr << InputRet.Error << std::endl;
+            return 1;
+        }
 
-enum class OExprType {
-    // A C++ Function.
-    Intrinsic,
-    // An evaluatable expression root
-    Expr,
-    // Data, cannot be expanded.
-    Data,
-    // List of Expr
-    ExprList
-};
+        const TokenList Tokens = Tokenize( InputRet.Out );
+        const OExprPtr Program = ConstructRootExpr( Tokens );
+        Execute( Machine, Program );
+        return 0;
+    }
 
-struct OIntrinsic {
-    OExprType Type;
-    string Token;
-    IntrinsicFunction Function;
-};
-
-struct OAtom {
-    string Token;
-};
-
-struct OExpr {
-    OExprType Type;
-    OAtom Atom;
-    OExprList Children;
-};
-
-struct OMachine {
-    OIntrinsicPtr EmptyIntrinsic;
-    OIntrinsics Intrinsics;
-    OExprList Memory;
-    bool ShouldExit;
-};
-
-OExprPtr EvalExpr( OMachinePtr Machine, OExprPtr Expr, EEvalIntrinsicMode EvalIntrinsicMode );
+    std::cerr << "Please use -1 for interpreter or a filename to run." << std::endl;
+    return 1;
+}
 
 OExprPtr Make_OExprPtr_Empty() {
     OExprPtr Ptr = OExprPtr( new OExpr{} );
@@ -501,34 +458,3 @@ void InterpreterLoop( OMachinePtr Machine ) {
         cout << Out->Atom.Token << endl;
     }
 }
-
-int main( int argc, char* argv[] ) {
-    OMachinePtr Machine = Make_OMachinePtr();
-    ResetMachine( Machine );
-
-    if ( argc > 1 ) {
-
-        const string arg1{ argv[ 1 ] };
-
-        if ( arg1 == "-i" ) {
-            InterpreterLoop( Machine );
-            return 0;
-        }
-
-        // Compile the file arg1
-        auto Input = ReadFileIntoString( arg1 );
-        assert( !Input.ErrorOccured );
-
-        const TokenList Tokens = Tokenize( Input.Out );
-        const OExprPtr Program = ConstructRootExpr( Tokens );
-        Execute( Machine, Program );
-
-        //cout << "Tokens:" << endl;
-        //for ( int i = 0; i < Tokens.Length(); i++ ) {
-        //    cout << Tokens[ i ] << endl;
-        //}
-        //cout << endl << endl << "Output:" << endl << endl;
-    }
-    return 0;
-}
-

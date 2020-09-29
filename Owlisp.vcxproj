@@ -144,6 +144,7 @@
   <ItemGroup>
     <ClInclude Include="Containers.h" />
     <ClInclude Include="IO.h" />
+    <ClInclude Include="Owlisp.h" />
     <ClInclude Include="Tokenizer.h" />
   </ItemGroup>
   <ItemGroup>

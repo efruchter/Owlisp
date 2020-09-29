@@ -1,9 +1,10 @@
 #pragma once
 
+#include "Containers.h"
+
 #include <string>
 #include <assert.h>
 #include <vector>
-#include "Containers.h"
 
 using namespace std;
 
@@ -86,6 +87,13 @@ TokenList Tokenize( const string& Input ) {
             Token += Char;
         }
     }
+
+    #if PRINT_TOKENS
+    for ( int i = 0; i < Tokens.Length(); i++ ) {
+        cout << Tokens[ i ] << endl;
+    }
+    #endif
+
     return Tokens;
 }
 

@@ -53,14 +53,14 @@ struct OArray {
     }
 
     template<typename F>
-    void SwapOrSet( const T& t, F Predicate ) {
+    void SwapOrSet( const T& Element, F SwapIfTrue ) {
         for ( int i = 0; i < Length(); i++ ) {
-            if ( Predicate( Get( i ) ) ) {
-                Get( i ) = t;
+            if ( SwapIfTrue( Get( i ) ) ) {
+                Get( i ) = Element;
                 return;
             }
         }
 
-        Add( t );
+        Add( Element );
     }
 };
