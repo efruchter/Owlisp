@@ -1,4 +1,4 @@
-#define MANAGE_EXPR_MEM 1
+#define MANAGE_EXPR_MEM 0
 #define PRINT_TOKENS 0
 
 #include "Owlisp.h"
@@ -289,7 +289,7 @@ void BuildIntrinsics( OMachinePtr Machine ) {
             NewExpr->Children.Add( Expr->Children[ 1 ] );
             NewExpr->Children.Add( EvalExpr( Machine, Expr->Children[ 2 ], EEvalIntrinsicMode::NoExecute ) );
 
-            Machine->Memory.SwapOrSet( NewExpr, [&]( const OExprPtr& ExistingExpr ) {
+            Machine->Stack.PeekStack().SwapOrSet( NewExpr, [&]( const OExprPtr& ExistingExpr ) {
                 if ( ExistingExpr->Children.Length() == 2 ) {
                     if ( ExistingExpr->Children[ 0 ]->Atom.Token == NewExpr->Children[ 0 ]->Atom.Token ) {
                         return true;
@@ -389,14 +389,14 @@ OExprPtr ConstructRootExpr( const TokenList& Tokens ) {
 }
 
 OExprPtr EvalInMemory( const OMachinePtr Machine, const OExprPtr Expr, EEvalIntrinsicMode EvalIntrinsicMode ) {
-    for ( int i = 0; i < Machine->Memory.Length(); i++ ) {
-        if ( Machine->Memory[ i ]->Children.Length() == 1 ) {
-            if ( Machine->Memory[ i ]->Children[ 0 ]->Atom.Token == Expr->Atom.Token ) {
-                return EvalExpr( Machine, Machine->Memory[ i ]->Children[ 0 ], EvalIntrinsicMode );
+    for ( int i = 0; i < Machine->Stack.PeekStack().Length(); i++ ) {
+        if ( Machine->Stack.PeekStack()[ i ]->Children.Length() == 1 ) {
+            if ( Machine->Stack.PeekStack()[ i ]->Children[ 0 ]->Atom.Token == Expr->Atom.Token ) {
+                return EvalExpr( Machine, Machine->Stack.PeekStack()[ i ]->Children[ 0 ], EvalIntrinsicMode );
             }
-        } else if ( Machine->Memory[ i ]->Children.Length() == 2 ) {
-            if ( Machine->Memory[ i ]->Children[ 0 ]->Atom.Token == Expr->Atom.Token ) {
-                return EvalExpr( Machine, Machine->Memory[ i ]->Children[ 1 ], EvalIntrinsicMode );
+        } else if ( Machine->Stack.PeekStack()[ i ]->Children.Length() == 2 ) {
+            if ( Machine->Stack.PeekStack()[ i ]->Children[ 0 ]->Atom.Token == Expr->Atom.Token ) {
+                return EvalExpr( Machine, Machine->Stack.PeekStack()[ i ]->Children[ 1 ], EvalIntrinsicMode );
             }
         }
     }
@@ -429,23 +429,35 @@ OExprPtr EvalExpr( OMachinePtr Machine, OExprPtr Expr, EEvalIntrinsicMode EvalIn
 }
 
 void ResetMachine( OMachinePtr Machine ) {
-    OMachine FreshMachine{};
-    *Machine = FreshMachine;
+    Machine->EmptyIntrinsic = {};
+    Machine->Intrinsics.Empty();
+    Machine->Stack.Empty();
+    Machine->ShouldExit = false;
     BuildIntrinsics( Machine );
 }
 
 OExprPtr Execute( OMachinePtr Machine, OExprPtr Program ) {
+    Machine->Stack.PushStack();
+    OExprPtr Ret = nullptr;
+
     if ( Program->Type == OExprType::ExprList ) {
         if ( Program->Children.Length() == 1 ) {
-            return EvalExpr( Machine, Program->Children[ 0 ], EEvalIntrinsicMode::Execute );
-        }
-        for ( int i = 0; i < Program->Children.Length(); i++ ) {
-            EvalExpr( Machine, Program->Children[ i ], EEvalIntrinsicMode::Execute );
+            Ret = EvalExpr( Machine, Program->Children[ 0 ], EEvalIntrinsicMode::Execute );
+        } else {
+            for ( int i = 0; i < Program->Children.Length(); i++ ) {
+                EvalExpr( Machine, Program->Children[ i ], EEvalIntrinsicMode::Execute );
+            }
         }
     } else {
-        return EvalExpr( Machine, Program, EEvalIntrinsicMode::Execute );
+        Ret = EvalExpr( Machine, Program, EEvalIntrinsicMode::Execute );
     }
-    return Make_OExprPtr_Empty();
+
+    if ( Ret == nullptr ) {
+        Ret = Make_OExprPtr_Empty();
+    }
+
+    Machine->Stack.PopStack();
+    return Ret;
 }
 
 void InterpreterLoop( OMachinePtr Machine ) {

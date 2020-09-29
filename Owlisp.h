@@ -23,6 +23,7 @@ typedef OIntrinsic* OIntrinsicPtr;
 #endif
 
 typedef OArray<OExprPtr> OExprList;
+typedef OArray<OExprList> StackFrames;
 typedef OArray<OIntrinsicPtr> OIntrinsics;
 typedef function<OExprPtr( const OExprPtr )> IntrinsicFunction;
 
@@ -48,20 +49,37 @@ struct OIntrinsic {
     IntrinsicFunction Function;
 };
 
+enum class OAtomDataPrimitiveType : char {
+    String,
+    Int,
+    Float,
+    Long,
+    Double
+};
+
+union OAtomData {
+    int Int;
+    float Float;
+    long Long;
+    double Double;
+};
+
 struct OAtom {
-    string Token;
+    OAtomData PrimitiveData{};
+    OAtomDataPrimitiveType PrimitiveType{};
+    string Token{};
 };
 
 struct OExpr {
-    OExprType Type;
-    OAtom Atom;
-    OExprList Children;
+    OExprType Type{};
+    OAtom Atom{};
+    OExprList Children{};
 };
 
 struct OMachine {
     OIntrinsicPtr EmptyIntrinsic;
     OIntrinsics Intrinsics;
-    OExprList Memory;
+    StackFrames Stack;
     bool ShouldExit;
 };
 

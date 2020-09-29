@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <assert.h>
 
 template<typename T, typename E>
 struct Return {
@@ -44,12 +45,27 @@ struct OArray {
         Arr.push_back( V );
     }
 
+    void PushStack() {
+        PushStack( {} );
+    }
+
     T PopStack() {
-        return Arr.pop_back();
+        T Out = PeekStack();
+        Arr.pop_back();
+        return Out;
+    }
+
+    T& PeekStack() {
+        assert( Arr.size() >= 1 );
+        return Arr[ Arr.size() - 1 ];
     }
 
     int Length() const {
         return static_cast<int>( Arr.size() );
+    }
+
+    void Empty() {
+        Arr.clear();
     }
 
     template<typename F>
