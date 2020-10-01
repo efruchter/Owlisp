@@ -27,6 +27,8 @@ typedef OArray<OExprList> StackFrames;
 typedef OArray<OIntrinsicPtr> OIntrinsics;
 typedef function<OExprPtr( const OExprPtr )> IntrinsicFunction;
 
+const string TOKEN_DEFUNC = "defunc";
+
 enum class EEvalIntrinsicMode {
     NoExecute,
     Execute
@@ -39,8 +41,6 @@ enum class OExprType {
     Expr,
     // Data, cannot be expanded.
     Data,
-    // List of Expr
-    ExprList,
     // A function, needs own stack frame w. parameters loaded into it.
     ExprFunc
 };

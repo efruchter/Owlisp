@@ -1,5 +1,8 @@
+(println `println OK`)
+
 (defunc MultAdd X Y (
 	(+ (* X Y) Y)
 ))
 
+(print `Real: ` (+ (* 4 5) 5) ` Func: `)
 (println (MultAdd 4 5))

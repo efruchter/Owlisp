@@ -38,6 +38,7 @@ struct OArray {
         return Arr[ index ];
     }
 
+    //
     void Add( const T& V ) {
         Arr.push_back( V );
     }
@@ -52,6 +53,22 @@ struct OArray {
 
     void Add() {
         Add( {} );
+    }
+    //
+    void Insert( const int Index, const T& V ) {
+        Arr.insert( Index, V );
+    }
+
+    void Insert( const int Index, T& V  ) {
+        Arr.insert( V );
+    }
+
+    void Insert( const int Index, T&& V  ) {
+        Arr.insert(Index,  V );
+    }
+
+    void Insert(const int Index ) {
+        Arr.insert( Index, {} );
     }
 
     void PushStack( T& V ) {
@@ -92,11 +109,15 @@ struct OArray {
         return static_cast<int>( Arr.size() );
     }
 
-    bool NonEmpty() const {
+    bool IsNonEmpty() const {
         return Length() > 0;
     }
 
-    void Empty() {
+    bool IsEmpty() const {
+        return Length() == 0;
+    }
+
+    void Clear() {
         Arr.clear();
     }
 
