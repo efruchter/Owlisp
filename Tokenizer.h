@@ -5,6 +5,7 @@
 #include <string>
 #include <assert.h>
 #include <vector>
+#include <iostream>
 
 using namespace std;
 
@@ -90,7 +91,7 @@ TokenList Tokenize( const string& Input ) {
 
     #if PRINT_TOKENS
     for ( int i = 0; i < Tokens.Length(); i++ ) {
-        cout << Tokens[ i ] << endl;
+        std::cout << Tokens[ i ] << std::endl;
     }
     #endif
 

@@ -1,11 +1,5 @@
-(println `Hello world!`)
-(set Res
-	(+ 5 4 3 2 1)
-)
-(println	(*	45
-				(/ 3 4)
-				(// 10 5)
-				Res
-			)
-)
-(? (1))
+(defunc MultAdd X Y (
+	(+ (* X Y) Y)
+))
+
+(println (MultAdd 4 5))

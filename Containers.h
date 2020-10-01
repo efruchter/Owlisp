@@ -78,8 +78,22 @@ struct OArray {
         return Arr[ Arr.size() - 1 ];
     }
 
+    T& PeekStackPrev() {
+        assert( Arr.size() >= 2 );
+        return Arr[ Arr.size() - 2 ];
+    }
+
+    T& Last() {
+        assert( Arr.size() >= 1 );
+        return Arr[ Arr.size() - 1 ];
+    }
+
     int Length() const {
         return static_cast<int>( Arr.size() );
+    }
+
+    bool NonEmpty() const {
+        return Length() > 0;
     }
 
     void Empty() {

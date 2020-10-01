@@ -35,5 +35,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="main.owl" />
+    <None Include="FuncsAndStructs.owl" />
   </ItemGroup>
 </Project>

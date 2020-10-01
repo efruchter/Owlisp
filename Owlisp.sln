@@ -7,12 +7,18 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Owlisp", "Owlisp.vcxproj", 
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug Interpeter|x64 = Debug Interpeter|x64
+		Debug Interpeter|x86 = Debug Interpeter|x86
 		Debug|x64 = Debug|x64
 		Debug|x86 = Debug|x86
 		Release|x64 = Release|x64
 		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{D5EE84E6-0663-4AE7-8AFF-EEFDE317BD0F}.Debug Interpeter|x64.ActiveCfg = Debug Interpeter|x64
+		{D5EE84E6-0663-4AE7-8AFF-EEFDE317BD0F}.Debug Interpeter|x64.Build.0 = Debug Interpeter|x64
+		{D5EE84E6-0663-4AE7-8AFF-EEFDE317BD0F}.Debug Interpeter|x86.ActiveCfg = Debug Interpeter|Win32
+		{D5EE84E6-0663-4AE7-8AFF-EEFDE317BD0F}.Debug Interpeter|x86.Build.0 = Debug Interpeter|Win32
 		{D5EE84E6-0663-4AE7-8AFF-EEFDE317BD0F}.Debug|x64.ActiveCfg = Debug|x64
 		{D5EE84E6-0663-4AE7-8AFF-EEFDE317BD0F}.Debug|x64.Build.0 = Debug|x64
 		{D5EE84E6-0663-4AE7-8AFF-EEFDE317BD0F}.Debug|x86.ActiveCfg = Debug|Win32
