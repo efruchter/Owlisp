@@ -1,8 +1,10 @@
-#define MANAGE_EXPR_MEM 0
+#define MANAGE_EXPR_MEM 1
 #define PRINT_TOKENS 0
+#define PRINT_EVAL 0
 
 #include "Owlisp.h"
 #include <iostream>
+#include <math.h> 
 
 int main( int argc, char* argv[] ) {
     OMachinePtr Machine = Make_OMachinePtr();
@@ -31,7 +33,7 @@ int main( int argc, char* argv[] ) {
 OExprPtr Make_OExprPtr_Empty() {
     OExprPtr Ptr = OExprPtr( new OExpr{} );
     assert( Ptr != nullptr );
-    Ptr->Type = OExprType::Data;
+    Ptr->Type = OExprType::Expr;
     return Ptr;
 }
 
@@ -112,7 +114,8 @@ void BuildIntrinsics( OMachinePtr Machine ) {
             assert( Expr->Children.Length() > 0 );
             assert( Expr->Children[ 0 ]->Atom.Token == Token_Print );
             for ( int i = 1; i < Expr->Children.Length(); i++ ) {
-                cout << TrimEnclosingQuotes( EvalExpr( Machine, Expr->Children[ i ], EEvalIntrinsicMode::Execute )->Atom.Token ) << endl;
+                OExprPtr Result = EvalExpr( Machine, Expr->Children[ i ], EEvalIntrinsicMode::Execute );
+                cout << TrimEnclosingQuotes( Result->Atom.Token ) << endl;
             }
             if ( Expr->Children.Length() == 1 ) {
                 cout << endl;
@@ -197,6 +200,25 @@ void BuildIntrinsics( OMachinePtr Machine ) {
             OExprPtr Result = Make_OExprPtr( OExprType::Data );
             stringstream SS{};
             SS << sum;
+            Result->Atom.Token = SS.str();
+            return Result;
+        };
+        Machine->Intrinsics.Add( Intrinsic );
+    }
+    { // sqrt
+        const string Token_Sqrt = "sqrt";
+        OIntrinsicPtr Intrinsic = Make_OIntriniscPtr( OExprType::NativeFunction );
+        Intrinsic->Token = Token_Sqrt;
+        Intrinsic->Function = [Token_Sqrt, Machine]( const OExprPtr Expr ) {
+            assert( Expr->Children.Length() == 2 );
+            assert( Expr->Children[ 0 ]->Atom.Token == Token_Sqrt );
+            stringstream Stream;
+            Stream << EvalExpr( Machine, Expr->Children[ 1 ], EEvalIntrinsicMode::Execute )->Atom.Token;
+            float a = 0;
+            Stream >> a;
+            OExprPtr Result = Make_OExprPtr( OExprType::Data );
+            stringstream SS{};
+            SS << std::sqrtf( a );
             Result->Atom.Token = SS.str();
             return Result;
         };
@@ -322,24 +344,11 @@ void BuildIntrinsics( OMachinePtr Machine ) {
 
 const OIntrinsicPtr FindIntrinsic( const OMachinePtr Machine, const OExprPtr Expr ) {
     for ( int i = 0; i < Machine->Intrinsics.Length(); i++ ) {
-        if ( Expr->Children.IsNonEmpty() ) {
-            if ( Machine->Intrinsics[ i ]->Token == Expr->Children[ 0 ]->Atom.Token ) {
-                return Machine->Intrinsics[ i ];
-            }
-        } else if ( Machine->Intrinsics[ i ]->Token == Expr->Atom.Token ) {
+        if ( Machine->Intrinsics[ i ]->Token == TopAtom( Expr ).Token ) {
             return Machine->Intrinsics[ i ];
         }
     }
     return Machine->EmptyIntrinsic;
-}
-
-const OIntrinsicPtr FindFunc( const OMachinePtr Machine, const OExprPtr Expr ) {
-    for ( int i = 0; i < Machine->Intrinsics.Length(); i++ ) {
-        if ( Machine->Intrinsics[ i ]->Token == Expr->Children[ 0 ]->Atom.Token ) {
-            return Machine->Intrinsics[ i ];
-        }
-    }
-    return nullptr;
 }
 
 OExprPtr ConstructRootExpr( const TokenList& Tokens, int StartIndex, int EndIndex ) {
@@ -412,12 +421,14 @@ void SetFunctionMem( OMachinePtr Machine, const OExprPtr Expr, const OExprPtr Fu
     // Expr is FUNC VAR1 VAR2 ...
     // Func is NAME VAR1 VAR2 ... BODY
     for ( int ExprIndex = 1; ExprIndex < Expr->Children.Length(); ExprIndex++ ) {
-        if ( ExprIndex >= Function->Children.Length() ) {
+        // Case: Func has less parameters than we've fed in.
+        if ( ExprIndex >= Function->Children.Length() - 1 ) {
             break;
         }
+
         OExprPtr NewExpr = Make_OExprPtr( OExprType::Expr );
         NewExpr->Children.Add( Function->Children[ ExprIndex ] );
-        NewExpr->Children.Add( Expr->Children[ ExprIndex ] );
+        NewExpr->Children.Add( EvalExpr( Machine, Expr->Children[ ExprIndex ], EEvalIntrinsicMode::NoExecute ) );
         Machine->Stack.PeekStack().SetOrAdd( NewExpr, [&]( const OExprPtr& ExistingExpr ) {
             if ( ExistingExpr->Children.IsNonEmpty() ) {
                 if ( TopAtom( ExistingExpr ).Token == TopAtom( NewExpr ).Token ) {
@@ -430,24 +441,29 @@ void SetFunctionMem( OMachinePtr Machine, const OExprPtr Expr, const OExprPtr Fu
 }
 
 OExprPtr EvalInMemory( const OMachinePtr Machine, const OExprPtr Expr, EEvalIntrinsicMode EvalIntrinsicMode ) {
-    for ( int i = 0; i < Machine->Stack.PeekStack().Length(); i++ ) {
-        if ( Machine->Stack.PeekStack()[ i ]->Type == OExprType::ExprFunc ) {
-            if ( TopAtom( Machine->Stack.PeekStack()[ i ] ).Token == TopAtom( Expr ).Token ) {
-                // Params are child [1, (N-2)], body is N-1
-                OExprPtr FunctionExpr = Machine->Stack.PeekStack()[ i ];
-                Machine->Stack.PushStack();
-                SetFunctionMem( Machine, Expr, FunctionExpr );
-                OExprPtr Out =  EvalExpr( Machine, FunctionExpr->Children.Last(), EvalIntrinsicMode );
-                Machine->Stack.PopStack();
-                return Out;
-            }
-        }  else if ( Machine->Stack.PeekStack()[ i ]->Children.Length() == 1 ) {
-            if ( Machine->Stack.PeekStack()[ i ]->Children[ 0 ]->Atom.Token == Expr->Atom.Token ) {
-                return EvalExpr( Machine, Machine->Stack.PeekStack()[ i ]->Children[ 0 ], EvalIntrinsicMode );
-            }
-        } else if ( Machine->Stack.PeekStack()[ i ]->Children.Length() == 2 ) {
-            if ( Machine->Stack.PeekStack()[ i ]->Children[ 0 ]->Atom.Token == Expr->Atom.Token ) {
-                return EvalExpr( Machine, Machine->Stack.PeekStack()[ i ]->Children[ 1 ], EvalIntrinsicMode );
+    for ( int StackFrameIndex = Machine->Stack.Length() - 1; StackFrameIndex >= 0; StackFrameIndex-- ) {
+        const OExprList& StackFrame = Machine->Stack[ StackFrameIndex ];
+        for ( int i = 0; i < StackFrame.Length(); i++ ) {
+            if ( StackFrame[ i ]->Type == OExprType::ExprFunc ) {
+                if ( TopAtom( StackFrame[ i ] ).Token == TopAtom( Expr ).Token ) {
+                    // Params are child [1, (N-2)], body is N-1
+                    OExprPtr FunctionExpr = StackFrame[ i ];
+                    Machine->Stack.PushStack();
+                    SetFunctionMem( Machine, Expr, FunctionExpr );
+                    OExprPtr Out = EvalExpr( Machine, FunctionExpr->Children.Last(), EvalIntrinsicMode );
+                    // We want to remove child nodes because they are structures only of the Function
+                    Out->Children.Clear();
+                    Machine->Stack.PopStack();
+                    return Out;
+                }
+            } else if ( StackFrame[ i ]->Children.Length() == 1 ) {
+                if ( TopAtom( StackFrame[ i ] ).Token == TopAtom( Expr ).Token ) {
+                    return EvalExpr( Machine, StackFrame[ i ]->Children[ 0 ], EvalIntrinsicMode );
+                }
+            } else if ( StackFrame[ i ]->Children.Length() == 2 ) {
+                if ( TopAtom( StackFrame[ i ] ).Token == TopAtom( Expr ).Token ) {
+                    return EvalExpr( Machine, StackFrame[ i ]->Children[ 1 ], EvalIntrinsicMode );
+                }
             }
         }
     }
@@ -465,22 +481,33 @@ bool AllData( const OExprPtr Expr ) {
 
 OExprPtr EvalExpr( OMachinePtr Machine, OExprPtr Expr, EEvalIntrinsicMode EvalIntrinsicMode ) {
     Expr = EvalInMemory( Machine, Expr, EvalIntrinsicMode );
+
+#if PRINT_EVAL
     if ( Expr->Children.IsEmpty() ) {
-        return Expr;
-    } else if ( Expr->Children.IsNonEmpty() && Expr->Children[ 0 ]->Atom.Token == TOKEN_DEFUNC ) {
-        // defunc is intrinsic'd and can wait to be expanded until a later time.
-    } else if ( Expr->Children.IsNonEmpty() && EvalIntrinsicMode == EEvalIntrinsicMode::Execute ) {
+        std::cout << TopAtom( Expr ).Token << "|";
+    }
+    for ( int i = 0; i < Expr->Children.Length(); i++ ) {
+        std::cout << TopAtom( Expr->Children[ i ] ).Token << "|";
+    }
+    std::cout << std::endl;
+#endif
+
+    // Check if first node is intrinsic.
+    if ( EvalIntrinsicMode == EEvalIntrinsicMode::Execute && Expr->Children.IsNonEmpty() ) {
         OIntrinsicPtr Intrinsic = FindIntrinsic( Machine, Expr );
         if ( Intrinsic != Machine->EmptyIntrinsic ) {
             return Intrinsic->Function( Expr );
         }
     }
+
     for ( int i = 0; i < Expr->Children.Length(); i++ ) {
         Expr->Children[ i ]->Atom = EvalExpr( Machine, Expr->Children[ i ], EvalIntrinsicMode )->Atom;
     }
+
     if ( Expr->Children.IsNonEmpty() ) {
         return Expr->Children.Last();
     }
+
     return Expr;
 }
 

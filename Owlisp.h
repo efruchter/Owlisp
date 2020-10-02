@@ -95,14 +95,13 @@ OMachinePtr Make_OMachinePtr();
 
 OExprPtr ToOExpr_SingleNoEval( const TokenList& Tokens );
 
-const OIntrinsicPtr FindFunc( const OMachinePtr Machine, const OExprPtr Expr );
-
 OExprPtr ConstructRootExpr( const TokenList& Tokens, int StartIndex, int EndIndex );
 OExprPtr ConstructRootExpr( const TokenList& Tokens );
 
 void SetFunctionMem( OMachinePtr Machine, const OExprPtr InExpr, const OExprPtr ExprFunc );
 OExprPtr EvalInMemory( const OMachinePtr Machine, const OExprPtr Expr, EEvalIntrinsicMode EvalIntrinsicMode );
 OExprPtr EvalExpr( OMachinePtr Machine, OExprPtr Expr, EEvalIntrinsicMode EvalIntrinsicMode );
+const OAtom& TopAtom( const OExprPtr Expr );
 
 void ResetMachine( OMachinePtr Machine );
 void BuildIntrinsics( OMachinePtr Machine );
