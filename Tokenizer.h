@@ -47,6 +47,13 @@ bool IsWhiteSpace( const string& Token ) {
     return false;
 }
 
+template <typename T>
+T ParseTokenToPrimitive( const string& Token ) {
+    T Out{};
+    stringstream{ Token } >> Out;
+    return Out;
+}
+
 TokenList Tokenize( const string& Input ) {
     TokenList Tokens;
     string Token;

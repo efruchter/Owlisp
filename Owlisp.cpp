@@ -1,4 +1,4 @@
-#define MANAGE_EXPR_MEM 1
+#define MANAGE_EXPR_MEM 0
 #define PRINT_TOKENS 0
 #define PRINT_EVAL 0
 
@@ -133,11 +133,7 @@ void BuildIntrinsics( OMachinePtr Machine ) {
             assert( Expr->Children[ 0 ]->Atom.Token == Token_Addition );
             int sum = 0;
             for ( int i = 1; i < Expr->Children.Length(); i++ ) {
-                stringstream Stream;
-                Stream << EvalExpr( Machine, Expr->Children[ i ], EEvalIntrinsicMode::Execute )->Atom.Token;
-                int a = 0;
-                Stream >> a;
-                sum += a;
+                sum += ParseTokenToPrimitive<int>( EvalExpr( Machine, Expr->Children[ i ], EEvalIntrinsicMode::Execute )->Atom.Token );
             }
             OExprPtr Result = Make_OExprPtr( OExprType::Data );
             stringstream SS{};
@@ -337,6 +333,44 @@ void BuildIntrinsics( OMachinePtr Machine ) {
             } );
 
             return NewExpr;
+        };
+        Machine->Intrinsics.Add( Intrinsic );
+    }
+    { // ? Pick branch
+        const string Token_BranchPick = "?";
+        OIntrinsicPtr Intrinsic = Make_OIntriniscPtr( OExprType::NativeFunction );
+        Intrinsic->Token = Token_BranchPick;
+        Intrinsic->Function = [Token_BranchPick, Machine]( const OExprPtr Expr ) {
+            assert( Expr->Children.Length() == 4 ); //
+            auto Res = EvalExpr( Machine, Expr->Get( 1 ), EEvalIntrinsicMode::Execute );
+            if ( Res->Atom.Token == "0" ) {
+                return EvalExpr( Machine, Expr->Get( 3 ), EEvalIntrinsicMode::Execute );
+            }
+            return EvalExpr( Machine, Expr->Get( 2 ), EEvalIntrinsicMode::Execute );
+        };
+        Machine->Intrinsics.Add( Intrinsic );
+    }
+    { // ==
+        const string Token_Equality = "==";
+        OIntrinsicPtr Intrinsic = Make_OIntriniscPtr( OExprType::NativeFunction );
+        Intrinsic->Token = Token_Equality;
+        Intrinsic->Function = [Token_Equality, Machine]( const OExprPtr Expr ) {
+            assert( Expr->Children.Length() == 3 );
+            OExprPtr LHS = EvalExpr( Machine, Expr->Get( 1 ), EEvalIntrinsicMode::Execute );
+            OExprPtr RHS = EvalExpr( Machine, Expr->Get( 2 ), EEvalIntrinsicMode::Execute );
+            return Make_OExprPtr_Data( TopAtom( LHS ).Token == TopAtom( RHS ).Token ? TOKEN_TRUE : TOKEN_FALSE );
+        };
+        Machine->Intrinsics.Add( Intrinsic );
+    }
+    { // <
+        const string Token_LessThan = "<";
+        OIntrinsicPtr Intrinsic = Make_OIntriniscPtr( OExprType::NativeFunction );
+        Intrinsic->Token = Token_LessThan;
+        Intrinsic->Function = [Token_LessThan, Machine]( const OExprPtr Expr ) {
+            assert( Expr->Children.Length() == 3 );
+            OExprPtr LHS = EvalExpr( Machine, Expr->Get( 1 ), EEvalIntrinsicMode::Execute );
+            OExprPtr RHS = EvalExpr( Machine, Expr->Get( 2 ), EEvalIntrinsicMode::Execute );
+            return Make_OExprPtr_Data( TopAtom( LHS ).Token < TopAtom( RHS ).Token ? TOKEN_TRUE : TOKEN_FALSE );
         };
         Machine->Intrinsics.Add( Intrinsic );
     }

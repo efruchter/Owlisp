@@ -2,6 +2,11 @@
 	(+ (* X Y) Y)
 ))
 
+(defunc fMin X Y (
+	(? (< X Y) X Y)
+))
+
 (= A 9)
 (= B 6)
 (println `Result: ` (MultAdd A B))
+(println (fMin 8 5))

@@ -28,6 +28,8 @@ typedef OArray<OIntrinsicPtr> OIntrinsics;
 typedef function<OExprPtr( const OExprPtr )> IntrinsicFunction;
 
 const string TOKEN_DEFUNC = "defunc";
+const string TOKEN_FALSE = "0";
+const string TOKEN_TRUE = "1";
 
 enum class EEvalIntrinsicMode {
     NoExecute,
@@ -76,6 +78,10 @@ struct OExpr {
     OExprType Type{};
     OAtom Atom{};
     OExprList Children{};
+
+    OExprPtr& Get( const int Index ) {
+        return Children[ Index ];
+    }
 };
 
 struct OMachine {
