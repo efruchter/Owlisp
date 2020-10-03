@@ -1,4 +1,4 @@
-#define MANAGE_EXPR_MEM 0
+#define MANAGE_EXPR_MEM 1
 #define PRINT_TOKENS 0
 #define PRINT_EVAL 0
 
