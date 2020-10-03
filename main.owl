@@ -6,7 +6,21 @@
 	(? (< X Y) X Y)
 ))
 
+(= endl `\n`)
 (= A 9)
 (= B 6)
 (println `Result: ` (MultAdd A B))
 (println (fMin 8 5))
+(defunc Sqr X (* X X))
+
+(`Test of map function`)
+(defunc A1 P0 (Sqr P0))
+(print endl `Sum: ` (strjoin ` ` (map A1 (1 2 3 4))) endl)
+
+(`This is a test of reduce`)
+(defunc ListSum Sum Entry (
+	(+ Sum Entry)
+))
+(print endl `ListSum: ` (reduce ListSum (1 2 3 4 5)) endl)
+
+(print endl `Concat: ` (strjoin ` ` (4 8 5)) endl)

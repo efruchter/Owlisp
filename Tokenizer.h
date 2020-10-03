@@ -109,6 +109,21 @@ string TrimEnclosingQuotes( const string& In ) {
     if ( In.size() >= 2 && In[ 0 ] == StrLit[ 0 ] && In[ In.size() - 1 ] == StrLit[ 0 ] ) {
         return In.substr( 1, In.size() - 2 );
     }
-
     return In;
+}
+
+void StrReplaceAll( string& str, const string& from, const string& to ) {
+    if ( from.empty() )
+        return;
+    size_t start_pos = 0;
+    while ( ( start_pos = str.find( from, start_pos ) ) != string::npos ) {
+        str.replace( start_pos, from.length(), to );
+        start_pos += to.length(); // In case 'to' contains 'from', like replacing 'x' with 'yx'
+    }
+}
+
+string FilterRawStringForPrinting( const string& from ) {
+    string Out = TrimEnclosingQuotes( from );
+    StrReplaceAll( Out, "\\n", "\n" );
+    return Out;
 }

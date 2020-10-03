@@ -100,7 +100,7 @@ void BuildIntrinsics( OMachinePtr Machine ) {
             assert( Expr->Children.Length() > 0 );
             assert( Expr->Children[ 0 ]->Atom.Token == Token_Print );
             for ( int i = 1; i < Expr->Children.Length(); i++ ) {
-                cout << TrimEnclosingQuotes( EvalExpr( Machine, Expr->Children[ i ], EEvalIntrinsicMode::Execute )->Atom.Token );
+                cout << FilterRawStringForPrinting( EvalExpr( Machine, Expr->Children[ i ], EEvalIntrinsicMode::Execute )->Atom.Token );
             }
             return Make_OExprPtr_Empty();
         };
@@ -115,7 +115,7 @@ void BuildIntrinsics( OMachinePtr Machine ) {
             assert( Expr->Children[ 0 ]->Atom.Token == Token_Print );
             for ( int i = 1; i < Expr->Children.Length(); i++ ) {
                 OExprPtr Result = EvalExpr( Machine, Expr->Children[ i ], EEvalIntrinsicMode::Execute );
-                cout << TrimEnclosingQuotes( Result->Atom.Token ) << endl;
+                cout << FilterRawStringForPrinting( Result->Atom.Token ) << endl;
             }
             if ( Expr->Children.Length() == 1 ) {
                 cout << endl;
@@ -374,6 +374,45 @@ void BuildIntrinsics( OMachinePtr Machine ) {
         };
         Machine->Intrinsics.Add( Intrinsic );
     }
+    { //join
+        const string Token_StrJoin = "strjoin";
+        OIntrinsicPtr Intrinsic = Make_OIntriniscPtr( OExprType::NativeFunction );
+        Intrinsic->Token = Token_StrJoin;
+        Intrinsic->Function = [Token_StrJoin, Machine]( const OExprPtr Expr ) {
+            assert( Expr->Children.Length() == 3 );
+            stringstream OutStream{};
+            const string Delim = FilterRawStringForPrinting( TopAtom( EvalExpr( Machine, Expr->Get( 1 ), EEvalIntrinsicMode::Execute ) ).Token );
+            const auto Child = EvalExpr( Machine, Expr->Get( 2 ), EEvalIntrinsicMode::Execute );
+            for ( int i = 0; i < Child->Children.Length(); i++ ) {
+                OutStream << FilterRawStringForPrinting( TopAtom( EvalExpr( Machine, Child->Children[ i ], EEvalIntrinsicMode::Execute ) ).Token );
+                if ( i != ( Child->Children.Length() - 1 ) ) {
+                    OutStream << Delim;
+                }
+            }
+            OExprPtr RHS = EvalExpr( Machine, Expr->Get( 2 ), EEvalIntrinsicMode::Execute );
+            return Make_OExprPtr_Data( OutStream.str() );
+        };
+        Machine->Intrinsics.Add( Intrinsic );
+    }
+    { // map
+        const string Token_Map = "map";
+        OIntrinsicPtr Intrinsic = Make_OIntriniscPtr( OExprType::NativeFunction );
+        Intrinsic->Token = Token_Map;
+        Intrinsic->Function = [Token_Map, Machine]( const OExprPtr Expr ) {
+            assert( Expr->Children.Length() == 3 );
+            // 0: Name, 1: mapfunc, 2: (array)
+            // Goal, build 2-node tuples of each. A zip of func and data, then execute.
+            OExprPtr Out = Make_OExprPtr( OExprType::Expr );
+            for ( int i = 0; i < Expr->Get( 2 )->Children.Length(); i++ ) {
+                OExprPtr Zip = Make_OExprPtr( OExprType::Expr );
+                Zip->Children.Add( Expr->Get( 1 ) );
+                Zip->Children.Add( Expr->Get( 2 )->Children[ i ] );
+                Out->Children.Add( EvalExpr( Machine, Zip, EEvalIntrinsicMode::Execute ) );
+            }
+            return Out;
+        };
+        Machine->Intrinsics.Add( Intrinsic );
+    }
 }
 
 const OIntrinsicPtr FindIntrinsic( const OMachinePtr Machine, const OExprPtr Expr ) {
@@ -459,7 +498,6 @@ void SetFunctionMem( OMachinePtr Machine, const OExprPtr Expr, const OExprPtr Fu
         if ( ExprIndex >= Function->Children.Length() - 1 ) {
             break;
         }
-
         OExprPtr NewExpr = Make_OExprPtr( OExprType::Expr );
         NewExpr->Children.Add( Function->Children[ ExprIndex ] );
         NewExpr->Children.Add( EvalExpr( Machine, Expr->Children[ ExprIndex ], EEvalIntrinsicMode::NoExecute ) );
@@ -538,9 +576,9 @@ OExprPtr EvalExpr( OMachinePtr Machine, OExprPtr Expr, EEvalIntrinsicMode EvalIn
         Expr->Children[ i ]->Atom = EvalExpr( Machine, Expr->Children[ i ], EvalIntrinsicMode )->Atom;
     }
 
-    if ( Expr->Children.IsNonEmpty() ) {
+    /*if ( Expr->Children.IsNonEmpty() ) {
         return Expr->Children.Last();
-    }
+    }*/
 
     return Expr;
 }
