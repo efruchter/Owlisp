@@ -1,4 +1,4 @@
-#define MANAGE_EXPR_MEM 1
+#define MANAGE_EXPR_MEM 0
 #define PRINT_TOKENS 0
 #define PRINT_EVAL 0
 
@@ -431,6 +431,46 @@ void BuildIntrinsics( OMachinePtr Machine ) {
         };
         Machine->Intrinsics.Add( Intrinsic );
     }
+    { // reduce
+        const string Token_Reduce = "reduce";
+        OIntrinsicPtr Intrinsic = Make_OIntriniscPtr( OExprType::NativeFunction );
+        Intrinsic->Token = Token_Reduce;
+        Intrinsic->Function = [Token_Reduce, Machine]( const OExprPtr Expr ) {
+            assert( Expr->Children.Length() == 3 );
+            // 0: Name, 1: mapfunc, 2: (array)
+            // Goal, build 2-node tuples of each. A zip of func and data, then execute.
+            if ( Expr->Get( 1 )->Children.Length() == 3 ) {
+                Machine->Stack.PushStack();
+                OExprPtr Func = Make_OExprPtr( OExprType::ExprFunc );
+                const string MapFuncName = "_MapFunc";
+                Func->Children.Add( Make_OExprPtr_Data( MapFuncName ) );
+                Func->Children.Add( Expr->Get( 1 )->Children[ 0 ] );
+                Func->Children.Add( Expr->Get( 1 )->Children[ 1 ] );
+                Func->Children.Add( Expr->Get( 1 )->Children[ 2 ] );
+                OExprPtr Out = Expr->Get( 2 )->Children[ 0 ];
+                for ( int i = 1; i < Expr->Get( 2 )->Children.Length(); i++ ) {
+                    OExprPtr NamedFunc = Make_OExprPtr( OExprType::Expr );
+                    NamedFunc->Children.Add( Make_OExprPtr_Data( MapFuncName ) );
+                    NamedFunc->Children.Add( Out );
+                    NamedFunc->Children.Add( Expr->Get( 2 )->Children[ i ] );
+                    Out = EvalNamedFunction( Machine, NamedFunc, Func, EEvalIntrinsicMode::Execute );
+                }
+                Machine->Stack.PopStack();
+                return Out;
+            } else {
+                OExprPtr Out = Expr->Get( 2 )->Children[ 0 ];
+                for ( int i = 1; i < Expr->Get( 2 )->Children.Length(); i++ ) {
+                    OExprPtr Zip = Make_OExprPtr( OExprType::Expr );
+                    Zip->Children.Add( Expr->Get( 1 ) );
+                    Zip->Children.Add( Out );
+                    Zip->Children.Add( Expr->Get( 2 )->Children[ i ] );
+                    Out = EvalExpr( Machine, Zip, EEvalIntrinsicMode::Execute );
+                }
+                return Out;
+            }
+        };
+        Machine->Intrinsics.Add( Intrinsic );
+    }
 }
 
 const OIntrinsicPtr FindIntrinsic( const OMachinePtr Machine, const OExprPtr Expr ) {
@@ -606,9 +646,8 @@ OExprPtr EvalNamedFunction( OMachinePtr Machine, const OExprPtr Expr, const OExp
     SetFunctionMem( Machine, Expr, EInExprFuncFormat::FirstTokenName, Function );
     OExprPtr Out = EvalExpr( Machine, Function->Children.Last(), EvalIntrinsicMode );
     // We want to remove child nodes because they are structures only of the Function
-    Out->Children.Clear();
     Machine->Stack.PopStack();
-    return Out;
+    return Make_OExprPtr_Data( Out->Atom.Token );
 }
 
 OExprPtr EvalExpr( OMachinePtr Machine, OExprPtr Expr, const EEvalIntrinsicMode EvalIntrinsicMode ) {

@@ -1,12 +1,14 @@
-(defunc MultAdd X Y (
-	(+ (* X Y) Y)
-))
+(= endl (`\n`))
 
-(defunc fMin X Y (
-	(? (< X Y) X Y)
+(`This is a test of reduce`)
+(defunc ListSum Sum Entry (
+	(+ Sum Entry)
 ))
+(print endl `ListSum: ` (reduce ListSum (1 2 3 4 5)) endl)
+(print endl `ListSum-Inline: ` (reduce (S I (+ S I)) (1 2 3 4 5)) endl)
 
-(= endl `\n`)
+(print endl `Concat: ` (strjoin ` ` (4 8 5)) endl)
+
 (= A 9)
 (= B 6)
 (println `Result: ` (MultAdd A B))
@@ -17,10 +19,11 @@
 (print endl `Map: ` (strjoin ` ` (map Sqr (1 2 3 4))) endl)
 (print endl `Map-Inline: ` (strjoin ` ` (map (X (* X X)) (1 2 3 4))) endl)
 
-(`This is a test of reduce`)
-(defunc ListSum Sum Entry (
-	(+ Sum Entry)
+(defunc MultAdd X Y (
+	(+ (* X Y) Y)
 ))
-(print endl `ListSum: ` (reduce ListSum (1 2 3 4 5)) endl)
 
-(print endl `Concat: ` (strjoin ` ` (4 8 5)) endl)
+(defunc fMin X Y (
+	(? (< X Y) X Y)
+))
+
