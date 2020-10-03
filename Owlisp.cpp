@@ -402,14 +402,32 @@ void BuildIntrinsics( OMachinePtr Machine ) {
             assert( Expr->Children.Length() == 3 );
             // 0: Name, 1: mapfunc, 2: (array)
             // Goal, build 2-node tuples of each. A zip of func and data, then execute.
-            OExprPtr Out = Make_OExprPtr( OExprType::Expr );
-            for ( int i = 0; i < Expr->Get( 2 )->Children.Length(); i++ ) {
-                OExprPtr Zip = Make_OExprPtr( OExprType::Expr );
-                Zip->Children.Add( Expr->Get( 1 ) );
-                Zip->Children.Add( Expr->Get( 2 )->Children[ i ] );
-                Out->Children.Add( EvalExpr( Machine, Zip, EEvalIntrinsicMode::Execute ) );
+            if ( Expr->Get( 1 )->Children.Length() == 2 ) {
+                Machine->Stack.PushStack();
+                OExprPtr Func = Make_OExprPtr( OExprType::ExprFunc );
+                const string MapFuncName = "_MapFunc";
+                Func->Children.Add( Make_OExprPtr_Data( MapFuncName ) );
+                Func->Children.Add( Expr->Get( 1 )->Children[ 0 ] );
+                Func->Children.Add( Expr->Get( 1 )->Children[ 1 ] );
+                OExprPtr Out = Make_OExprPtr( OExprType::Expr );
+                for ( int i = 0; i < Expr->Get( 2 )->Children.Length(); i++ ) {
+                    OExprPtr NamedFunc = Make_OExprPtr( OExprType::Expr );
+                    NamedFunc->Children.Add( Make_OExprPtr_Data( MapFuncName ) );
+                    NamedFunc->Children.Add( Expr->Get( 2 )->Children[ i ] );
+                    Out->Children.Add( EvalNamedFunction( Machine, NamedFunc, Func, EEvalIntrinsicMode::Execute ) );
+                }
+                Machine->Stack.PopStack();
+                return Out;
+            } else {
+                OExprPtr Out = Make_OExprPtr( OExprType::Expr );
+                for ( int i = 0; i < Expr->Get( 2 )->Children.Length(); i++ ) {
+                    OExprPtr Zip = Make_OExprPtr( OExprType::Expr );
+                    Zip->Children.Add( Expr->Get( 1 ) );
+                    Zip->Children.Add( Expr->Get( 2 )->Children[ i ] );
+                    Out->Children.Add( EvalExpr( Machine, Zip, EEvalIntrinsicMode::Execute ) );
+                }
+                return Out;
             }
-            return Out;
         };
         Machine->Intrinsics.Add( Intrinsic );
     }
@@ -497,17 +515,17 @@ const OAtom& LastAtom( const OExprPtr Expr ) {
     return Expr->Atom;
 }
 
-void SetFunctionMem( OMachinePtr Machine, const OExprPtr Expr, const OExprPtr Function ) {
+void SetFunctionMem( OMachinePtr Machine, const OExprPtr InExpr, const EInExprFuncFormat InExprFuncFormat, const OExprPtr ExprFunc ) {
     // Expr is FUNC VAR1 VAR2 ...
     // Func is NAME VAR1 VAR2 ... BODY
-    for ( int ExprIndex = 1; ExprIndex < Expr->Children.Length(); ExprIndex++ ) {
+    for ( int ExprIndex = 1; ExprIndex < InExpr->Children.Length(); ExprIndex++ ) {
         // Case: Func has less parameters than we've fed in.
-        if ( ExprIndex >= Function->Children.Length() - 1 ) {
+        if ( ExprIndex >= ExprFunc->Children.Length() - 1 ) {
             break;
         }
         OExprPtr NewExpr = Make_OExprPtr( OExprType::Expr );
-        NewExpr->Children.Add( Function->Children[ ExprIndex ] );
-        NewExpr->Children.Add( EvalExpr( Machine, Expr->Children[ ExprIndex ], EEvalIntrinsicMode::NoExecute ) );
+        NewExpr->Children.Add( ExprFunc->Children[ ExprIndex ] );
+        NewExpr->Children.Add( EvalExpr( Machine, InExpr->Children[ ExprIndex ], EEvalIntrinsicMode::NoExecute ) );
         Machine->Stack.PeekStack().SetOrAdd( NewExpr, [&]( const OExprPtr& ExistingExpr ) {
             if ( ExistingExpr->Children.IsNonEmpty() ) {
                 if ( TopAtom( ExistingExpr ).Token == TopAtom( NewExpr ).Token ) {
@@ -525,15 +543,7 @@ OExprPtr EvalInMemory( const OMachinePtr Machine, const OExprPtr Expr, EEvalIntr
         for ( int i = 0; i < StackFrame.Length(); i++ ) {
             if ( StackFrame[ i ]->Type == OExprType::ExprFunc ) {
                 if ( TopAtom( StackFrame[ i ] ).Token == TopAtom( Expr ).Token ) {
-                    // Params are child [1, (N-2)], body is N-1
-                    OExprPtr FunctionExpr = StackFrame[ i ];
-                    Machine->Stack.PushStack();
-                    SetFunctionMem( Machine, Expr, FunctionExpr );
-                    OExprPtr Out = EvalExpr( Machine, FunctionExpr->Children.Last(), EvalIntrinsicMode );
-                    // We want to remove child nodes because they are structures only of the Function
-                    Out->Children.Clear();
-                    Machine->Stack.PopStack();
-                    return Out;
+                    return EvalNamedFunction( Machine, Expr, StackFrame[ i ], EvalIntrinsicMode );
                 }
             } else if ( StackFrame[ i ]->Children.Length() == 1 ) {
                 if ( TopAtom( StackFrame[ i ] ).Token == TopAtom( Expr ).Token ) {
@@ -588,6 +598,17 @@ OExprPtr EvalExpr( OMachinePtr Machine, OExprPtr Expr, const EEvalIntrinsicMode 
     }
 
     return Expr;
+}
+
+OExprPtr EvalNamedFunction( OMachinePtr Machine, const OExprPtr Expr, const OExprPtr Function, const EEvalIntrinsicMode EvalIntrinsicMode ) {
+    // Params are child [1, (N-2)], body is N-1
+    Machine->Stack.PushStack();
+    SetFunctionMem( Machine, Expr, EInExprFuncFormat::FirstTokenName, Function );
+    OExprPtr Out = EvalExpr( Machine, Function->Children.Last(), EvalIntrinsicMode );
+    // We want to remove child nodes because they are structures only of the Function
+    Out->Children.Clear();
+    Machine->Stack.PopStack();
+    return Out;
 }
 
 OExprPtr EvalExpr( OMachinePtr Machine, OExprPtr Expr, const EEvalIntrinsicMode EvalIntrinsicMode ) {

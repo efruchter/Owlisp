@@ -96,6 +96,7 @@ struct OMachine {
     bool ShouldExit;
 };
 
+OExprPtr EvalNamedFunction( OMachinePtr Machine, const OExprPtr Expr, const OExprPtr Function, const EEvalIntrinsicMode EvalIntrinsicMode );
 OExprPtr EvalExpr( OMachinePtr Machine, OExprPtr Expr, EEvalIntrinsicMode EvalIntrinsicMode );
 
 OExprPtr Make_OExprPtr_Empty();
@@ -109,7 +110,11 @@ OExprPtr ToOExpr_SingleNoEval( const TokenList& Tokens );
 OExprPtr ConstructRootExpr( const TokenList& Tokens, int StartIndex, int EndIndex );
 OExprPtr ConstructRootExpr( const TokenList& Tokens );
 
-void SetFunctionMem( OMachinePtr Machine, const OExprPtr InExpr, const OExprPtr ExprFunc );
+enum class EInExprFuncFormat {
+    FirstTokenName
+};
+
+void SetFunctionMem( OMachinePtr Machine, const OExprPtr InExpr, const EInExprFuncFormat InExprFuncFormat, const OExprPtr ExprFunc );
 OExprPtr EvalInMemory( const OMachinePtr Machine, const OExprPtr Expr, EEvalIntrinsicMode EvalIntrinsicMode );
 
 OExprPtr EvalExpr( OMachinePtr Machine, OExprPtr Expr, const EEvalIntrinsicMode EvalIntrinsicMode, const EEvalExprReturnMode ReturnMode );
