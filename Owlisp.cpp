@@ -382,7 +382,7 @@ void BuildIntrinsics( OMachinePtr Machine ) {
             assert( Expr->Children.Length() == 3 );
             stringstream OutStream{};
             const string Delim = FilterRawStringForPrinting( TopAtom( EvalExpr( Machine, Expr->Get( 1 ), EEvalIntrinsicMode::Execute ) ).Token );
-            const auto Child = EvalExpr( Machine, Expr->Get( 2 ), EEvalIntrinsicMode::Execute );
+            const auto Child = EvalExpr( Machine, Expr->Get( 2 ), EEvalIntrinsicMode::Execute, EEvalExprReturnMode::TopExpr );
             for ( int i = 0; i < Child->Children.Length(); i++ ) {
                 OutStream << FilterRawStringForPrinting( TopAtom( EvalExpr( Machine, Child->Children[ i ], EEvalIntrinsicMode::Execute ) ).Token );
                 if ( i != ( Child->Children.Length() - 1 ) ) {
@@ -490,6 +490,13 @@ const OAtom& TopAtom( const OExprPtr Expr ) {
     return Expr->Atom;
 }
 
+const OAtom& LastAtom( const OExprPtr Expr ) {
+    if ( Expr->Children.IsNonEmpty() ) {
+        return Expr->Children.Last()->Atom;
+    }
+    return Expr->Atom;
+}
+
 void SetFunctionMem( OMachinePtr Machine, const OExprPtr Expr, const OExprPtr Function ) {
     // Expr is FUNC VAR1 VAR2 ...
     // Func is NAME VAR1 VAR2 ... BODY
@@ -551,7 +558,7 @@ bool AllData( const OExprPtr Expr ) {
     return true;
 }
 
-OExprPtr EvalExpr( OMachinePtr Machine, OExprPtr Expr, EEvalIntrinsicMode EvalIntrinsicMode ) {
+OExprPtr EvalExpr( OMachinePtr Machine, OExprPtr Expr, const EEvalIntrinsicMode EvalIntrinsicMode, const EEvalExprReturnMode ReturnMode ) {
     Expr = EvalInMemory( Machine, Expr, EvalIntrinsicMode );
 
 #if PRINT_EVAL
@@ -576,11 +583,15 @@ OExprPtr EvalExpr( OMachinePtr Machine, OExprPtr Expr, EEvalIntrinsicMode EvalIn
         Expr->Children[ i ]->Atom = EvalExpr( Machine, Expr->Children[ i ], EvalIntrinsicMode )->Atom;
     }
 
-    /*if ( Expr->Children.IsNonEmpty() ) {
+    if ( ReturnMode == EEvalExprReturnMode::LastChild && Expr->Children.IsNonEmpty() ) {
         return Expr->Children.Last();
-    }*/
+    }
 
     return Expr;
+}
+
+OExprPtr EvalExpr( OMachinePtr Machine, OExprPtr Expr, const EEvalIntrinsicMode EvalIntrinsicMode ) {
+    return EvalExpr( Machine, Expr, EvalIntrinsicMode, EEvalExprReturnMode::LastChild );
 }
 
 void ResetMachine( OMachinePtr Machine ) {
@@ -605,6 +616,6 @@ void InterpreterLoop( OMachinePtr Machine ) {
         const TokenList Tokens = Tokenize( Input );
         const OExprPtr Program = ConstructRootExpr( Tokens );
         OExprPtr Out = Execute( Machine, Program );
-        cout << Out->Atom.Token << endl;
+        cout << LastAtom(Out).Token << endl;
     }
 }

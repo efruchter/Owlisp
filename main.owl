@@ -14,8 +14,8 @@
 (defunc Sqr X (* X X))
 
 (`Test of map function`)
-(defunc A1 P0 (Sqr P0))
-(print endl `Sum: ` (strjoin ` ` (map A1 (1 2 3 4))) endl)
+(print endl `Map: ` (strjoin ` ` (map Sqr (1 2 3 4))) endl)
+(print endl `Map-Inline: ` (strjoin ` ` (map (X (* X X)) (1 2 3 4))) endl)
 
 (`This is a test of reduce`)
 (defunc ListSum Sum Entry (

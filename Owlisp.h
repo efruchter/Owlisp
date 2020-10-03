@@ -36,6 +36,11 @@ enum class EEvalIntrinsicMode {
     Execute
 };
 
+enum class EEvalExprReturnMode {
+    TopExpr,
+    LastChild
+};
+
 enum class OExprType {
     // A native implemented Function. Will have a function pointer.
     NativeFunction,
@@ -106,8 +111,12 @@ OExprPtr ConstructRootExpr( const TokenList& Tokens );
 
 void SetFunctionMem( OMachinePtr Machine, const OExprPtr InExpr, const OExprPtr ExprFunc );
 OExprPtr EvalInMemory( const OMachinePtr Machine, const OExprPtr Expr, EEvalIntrinsicMode EvalIntrinsicMode );
-OExprPtr EvalExpr( OMachinePtr Machine, OExprPtr Expr, EEvalIntrinsicMode EvalIntrinsicMode );
+
+OExprPtr EvalExpr( OMachinePtr Machine, OExprPtr Expr, const EEvalIntrinsicMode EvalIntrinsicMode, const EEvalExprReturnMode ReturnMode );
+OExprPtr EvalExpr( OMachinePtr Machine, OExprPtr Expr, const EEvalIntrinsicMode EvalIntrinsicMode);
+
 const OAtom& TopAtom( const OExprPtr Expr );
+const OAtom& LastAtom( const OExprPtr Expr );
 
 void ResetMachine( OMachinePtr Machine );
 void BuildIntrinsics( OMachinePtr Machine );
