@@ -49,7 +49,9 @@ enum class OExprType {
     // Data, cannot be expanded.
     Data,
     // A function, needs own stack frame w. parameters loaded into it.
-    ExprFunc
+    ExprFunc,
+    //Break the enclosing loop
+    Break
 };
 
 struct OIntrinsic {
@@ -97,7 +99,6 @@ struct OMachine {
 };
 
 OExprPtr EvalNamedFunction( OMachinePtr Machine, const OExprPtr Expr, const OExprPtr Function, const EEvalIntrinsicMode EvalIntrinsicMode );
-OExprPtr EvalExpr( OMachinePtr Machine, OExprPtr Expr, EEvalIntrinsicMode EvalIntrinsicMode );
 
 OExprPtr Make_OExprPtr_Empty();
 OExprPtr Make_OExprPtr( const OExprType Type );
@@ -117,8 +118,8 @@ enum class EInExprFuncFormat {
 void SetFunctionMem( OMachinePtr Machine, const OExprPtr InExpr, const EInExprFuncFormat InExprFuncFormat, const OExprPtr ExprFunc );
 OExprPtr EvalInMemory( const OMachinePtr Machine, const OExprPtr Expr, EEvalIntrinsicMode EvalIntrinsicMode );
 
+OExprPtr EvalExpr( OMachinePtr Machine, OExprPtr Expr, const EEvalIntrinsicMode EvalIntrinsicMode );
 OExprPtr EvalExpr( OMachinePtr Machine, OExprPtr Expr, const EEvalIntrinsicMode EvalIntrinsicMode, const EEvalExprReturnMode ReturnMode );
-OExprPtr EvalExpr( OMachinePtr Machine, OExprPtr Expr, const EEvalIntrinsicMode EvalIntrinsicMode);
 
 const OAtom& TopAtom( const OExprPtr Expr );
 const OAtom& LastAtom( const OExprPtr Expr );

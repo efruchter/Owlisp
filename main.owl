@@ -1,4 +1,32 @@
 (= endl (`\n`))
+(= i 0)
+
+
+(defunc Fib n (
+	(= p1 1)
+	(= p0 1)
+	(= i n)
+	(loop
+		(?	(< i 2)
+			(return p0)
+			(
+				(= i (- i 1))
+				(= p1 p0)
+				(= p0 (+ p1 p0))
+			)
+		)
+	)
+	(return p0)
+))
+
+(print endl `FIB ` (Fib 2) endl)
+
+(= i 0)
+(loop 
+	(println i)
+	(= i (+ i 1))
+	(? (== i 6) (return i) ())
+)
 
 (`This is a test of reduce`)
 (defunc ListSum Sum Entry (
