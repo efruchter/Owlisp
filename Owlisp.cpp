@@ -341,12 +341,17 @@ void BuildIntrinsics( OMachinePtr Machine ) {
         OIntrinsicPtr Intrinsic = Make_OIntriniscPtr( OExprType::NativeFunction );
         Intrinsic->Token = Token_BranchPick;
         Intrinsic->Function = [Token_BranchPick, Machine]( const OExprPtr Expr ) {
-            assert( Expr->Children.Length() == 4 ); //
+            assert( Expr->Children.Length() >= 3 ); //
             auto Res = EvalExpr( Machine, Expr->Get( 1 ), EEvalIntrinsicMode::Execute );
             if ( Res->Atom.Token == "0" ) {
-                return EvalExpr( Machine, Expr->Get( 3 ), EEvalIntrinsicMode::Execute );
+                if ( Expr->Children.Length() > 3 ) {
+                    return EvalExpr( Machine, Expr->Get( 3 ), EEvalIntrinsicMode::Execute );
+                } else {
+                    return Make_OExprPtr_Empty();
+                }
+            } else {
+                return EvalExpr( Machine, Expr->Get( 2 ), EEvalIntrinsicMode::Execute );
             }
-            return EvalExpr( Machine, Expr->Get( 2 ), EEvalIntrinsicMode::Execute );
         };
         Machine->Intrinsics.Add( Intrinsic );
     }

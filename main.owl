@@ -1,25 +1,37 @@
 (= endl (`\n`))
 (= i 0)
 
-
 (defunc Fib n (
-	(= p1 1)
+	(= p1 0)
 	(= p0 1)
 	(= i n)
 	(loop
+		(print `p0-> ` p0  endl)
 		(?	(< i 2)
 			(return p0)
 			(
+				(= _p0 p0)
 				(= i (- i 1))
-				(= p1 p0)
 				(= p0 (+ p1 p0))
+				(= p1 _p0)
 			)
 		)
 	)
 	(return p0)
 ))
 
-(print endl `FIB ` (Fib 2) endl)
+(= j 10)
+(print endl `FIB ` j `: ` (Fib j) endl)
+(return)
+
+(= _i 0)
+(loop
+	(= _i (+ _i 1))
+	(? (< _i 10)
+		(print endl `FIB ` (Fib _i) endl)
+		(return 0)
+	)
+)
 
 (= i 0)
 (loop 
