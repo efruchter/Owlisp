@@ -110,6 +110,7 @@ OExprPtr ToOExpr_SingleNoEval( const TokenList& Tokens );
 
 OExprPtr ConstructRootExpr( const TokenList& Tokens, int StartIndex, int EndIndex );
 OExprPtr ConstructRootExpr( const TokenList& Tokens );
+int CompareTo( const string& LHS, const string& RHS );
 
 enum class EInExprFuncFormat {
     FirstTokenName

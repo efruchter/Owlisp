@@ -375,7 +375,7 @@ void BuildIntrinsics( OMachinePtr Machine ) {
             assert( Expr->Children.Length() == 3 );
             OExprPtr LHS = EvalExpr( Machine, Expr->Get( 1 ), EEvalIntrinsicMode::Execute );
             OExprPtr RHS = EvalExpr( Machine, Expr->Get( 2 ), EEvalIntrinsicMode::Execute );
-            return Make_OExprPtr_Data( TopAtom( LHS ).Token < TopAtom( RHS ).Token ? TOKEN_TRUE : TOKEN_FALSE );
+            return Make_OExprPtr_Data( ( CompareTo( TopAtom( LHS ).Token, TopAtom( RHS ).Token ) < 0 ) ? TOKEN_TRUE : TOKEN_FALSE );
         };
         Machine->Intrinsics.Add( Intrinsic );
     }
@@ -579,6 +579,12 @@ OExprPtr ConstructRootExpr( const TokenList& Tokens, int StartIndex, int EndInde
 
 OExprPtr ConstructRootExpr( const TokenList& Tokens ) {
     return ConstructRootExpr( Tokens, 0, Tokens.Length() - 1 );
+}
+
+int CompareTo( const string& LHS, const string& RHS ) {
+    // @todo: Figure out if the data token is a raw string (has quotes), otherwise
+    // treat as signed float.
+    return false;
 }
 
 int Min( int L, int R ) {
