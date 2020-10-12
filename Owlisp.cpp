@@ -379,6 +379,18 @@ void BuildIntrinsics( OMachinePtr Machine ) {
         };
         Machine->Intrinsics.Add( Intrinsic );
     }
+    { // >
+        const string Token_GreaterThan = ">";
+        OIntrinsicPtr Intrinsic = Make_OIntriniscPtr( OExprType::NativeFunction );
+        Intrinsic->Token = Token_GreaterThan;
+        Intrinsic->Function = [Token_GreaterThan, Machine]( const OExprPtr Expr ) {
+            assert( Expr->Children.Length() == 3 );
+            OExprPtr LHS = EvalExpr( Machine, Expr->Get( 1 ), EEvalIntrinsicMode::Execute );
+            OExprPtr RHS = EvalExpr( Machine, Expr->Get( 2 ), EEvalIntrinsicMode::Execute );
+            return Make_OExprPtr_Data( ( CompareTo( TopAtom( LHS ).Token, TopAtom( RHS ).Token ) > 0 ) ? TOKEN_TRUE : TOKEN_FALSE );
+        };
+        Machine->Intrinsics.Add( Intrinsic );
+    }
     { //join
         const string Token_StrJoin = "strjoin";
         OIntrinsicPtr Intrinsic = Make_OIntriniscPtr( OExprType::NativeFunction );
