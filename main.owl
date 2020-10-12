@@ -2,18 +2,26 @@
 
 (defunc Fib n (
 	(?	(< n 2)
-		(1)
-		((+
+		1
+		(+
 			(Fib (- n 1))
-			(Fib (- n 2)))
+			(Fib (- n 2))
 		)
 	)
 ))
 
 (= j 10)
-(println `Prepare 2 RECURSE`)
+(println `Prepare for recursion...`)
 (print endl `FIB ` j `: ` (Fib j) endl)
-(return 0)
+
+(defunc IsEven I (== (modi i 2) 0))
+
+(= i 0)
+(loop
+	(? (== i 10) (return 0) ())
+	(print `EvenOdd ` i `: ` (? IsEven `Even` `Odd`) endl)
+	(= i (+ i 1))
+)
 
 (`This is a test of reduce`)
 (defunc ListSum Sum Entry (

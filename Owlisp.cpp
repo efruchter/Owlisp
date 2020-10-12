@@ -284,6 +284,32 @@ void BuildIntrinsics( OMachinePtr Machine ) {
         };
         Machine->Intrinsics.Add( Intrinsic );
     }
+    { // // Integer Modulo
+        const string Token_IMod = "modi";
+        OIntrinsicPtr Intrinsic = Make_OIntriniscPtr( OExprType::NativeFunction );
+        Intrinsic->Token = Token_IMod;
+        Intrinsic->Function = [Token_IMod, Machine]( const OExprPtr Expr ) {
+            assert( Expr->Children.Length() == 3 );
+
+            stringstream SS{};
+            SS << EvalExpr( Machine, Expr->Children[ 1 ], EEvalIntrinsicMode::Execute )->Atom.Token;
+            int I = 0;
+            SS >> I;
+
+            SS = {};
+            SS << EvalExpr( Machine, Expr->Children[ 2 ], EEvalIntrinsicMode::Execute )->Atom.Token;
+            int M = 0;
+            SS >> M;
+
+            int ResultI = ( I % M );
+            OExprPtr Result = Make_OExprPtr( OExprType::Data );
+            SS = {};
+            SS << ResultI;
+            Result->Atom.Token = SS.str();
+            return Result;
+        };
+        Machine->Intrinsics.Add( Intrinsic );
+    }
     { // Set
         const string Token_Set = "=";
         OIntrinsicPtr Intrinsic = Make_OIntriniscPtr( OExprType::NativeFunction );
@@ -602,12 +628,11 @@ int CompareTo( const string& LHS, const string& RHS ) {
     ss << LHS;
     float a{};
     ss >> a;
-    ss.clear();
 
+    ss = {};
     ss << RHS;
     float b{};
     ss >> b;
-    ss.clear();
 
     if ( a < b ) {
         return -1;
