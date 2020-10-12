@@ -14,6 +14,8 @@
 (println `Prepare for recursion...`)
 (print endl `FIB ` j `: ` (Fib j) endl)
 
+(return)
+
 (defunc IsEven I (== (modi i 2) 0))
 
 (= i 0)

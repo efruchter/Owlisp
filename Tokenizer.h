@@ -14,7 +14,19 @@ const string ExpEnd = ")";
 const string StrLit = "`";
 const string WhitespaceTokens[] = { " ", "\t", "\n", "\r" };
 
-typedef OArray<string> TokenList;
+
+struct OToken {
+    const int Line;
+    const int Indent;
+    const string Token;
+
+    OToken( const int Line, const int Indent, const string& Token )
+        : Line( Line ), Indent( Indent ), Token( Token ) {}
+
+    operator const string& ( ) const { return Token; }
+};
+
+typedef OArray<OToken> TokenList;
 
 int CountOf( const string& Input, char Token ) {
     int Count = 0;
@@ -55,9 +67,12 @@ T ParseTokenToPrimitive( const string& Token ) {
 }
 
 TokenList Tokenize( const string& Input ) {
-    TokenList Tokens;
-    string Token;
+    TokenList Tokens{};
+    string Token{};
     bool WithinStrLiteral = false;
+    int Line = 1;
+    int Indent = 0;
+
     for ( char RawChar : Input ) {
         const string Char{ RawChar };
         if ( !WithinStrLiteral && Char == StrLit ) {
@@ -66,33 +81,40 @@ TokenList Tokenize( const string& Input ) {
         } else if ( WithinStrLiteral && Char == StrLit ) {
             WithinStrLiteral = false;
             Token += Char;
-            Tokens.Add( Token );
+            Tokens.Add( OToken{ Line, Indent, Token } );
             Token = "";
         } else if ( WithinStrLiteral ) {
             Token += Char;
         } else if ( Char == ExpStart ) {
             if ( Token.size() > 0 ) {
-                Tokens.Add( Token );
+                Tokens.Add( OToken{ Line, Indent, Token } );
                 Token = "";
             }
             Token += Char;
-            Tokens.Add( Token );
+            Tokens.Add( OToken{ Line, Indent, Token } );
             Token = "";
         } else if ( Char == ExpEnd ) {
             if ( Token.size() > 0 ) {
-                Tokens.Add( Token );
+                Tokens.Add( OToken{ Line, Indent, Token } );
                 Token = "";
             }
             Token += Char;
-            Tokens.Add( Token );
+            Tokens.Add( OToken{ Line, Indent, Token } );
             Token = "";
         } else if ( IsWhiteSpace( Char ) ) {
             if ( Token.size() > 0 ) {
-                Tokens.Add( Token );
+                Tokens.Add( OToken{ Line, Indent, Token } );
                 Token = "";
             }
         } else {
             Token += Char;
+        }
+
+        if ( Char == "\n" ) {
+            Line++;
+            Indent = 0;
+        } else {
+            Indent++;
         }
     }
 

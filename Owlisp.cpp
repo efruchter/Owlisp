@@ -571,11 +571,11 @@ OExprPtr ConstructRootExpr( const TokenList& Tokens, int StartIndex, int EndInde
         bool IsLeaf = true;
         bool InLiteral = false;
         for ( int i = StartIndex; i <= EndIndex; i++ ) {
-            if ( !InLiteral && Tokens[ i ] == StrLit ) {
+            if ( !InLiteral && Tokens[ i ].Token == StrLit ) {
                 InLiteral = true;
-            } else if ( InLiteral && Tokens[ i ] == StrLit ) {
+            } else if ( InLiteral && Tokens[ i ].Token == StrLit ) {
                 InLiteral = false;
-            } else if ( !InLiteral && ( Tokens[ i ] == ExpStart || Tokens[ i ] == ExpEnd ) ) {
+            } else if ( !InLiteral && ( Tokens[ i ].Token == ExpStart || Tokens[ i ].Token == ExpEnd ) ) {
                 IsLeaf = false;
                 break;
             }
@@ -595,12 +595,12 @@ OExprPtr ConstructRootExpr( const TokenList& Tokens, int StartIndex, int EndInde
     int InitBracketIndex = 0;
     int OpenBracketCount = 0;
     for ( int i = StartIndex; i <= EndIndex; i++ ) {
-        if ( Tokens[ i ] == ExpStart ) {
+        if ( Tokens[ i ].Token == ExpStart ) {
             if ( OpenBracketCount == 0 ) {
                 InitBracketIndex = i;
             }
             OpenBracketCount++;
-        } else if ( Tokens[ i ] == ExpEnd ) {
+        } else if ( Tokens[ i ].Token == ExpEnd ) {
             OpenBracketCount--;
             if ( OpenBracketCount == 0 ) {
                 Root->Children.Add( ConstructRootExpr( Tokens, InitBracketIndex + 1, i - 1 ) );
