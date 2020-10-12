@@ -582,9 +582,28 @@ OExprPtr ConstructRootExpr( const TokenList& Tokens ) {
 }
 
 int CompareTo( const string& LHS, const string& RHS ) {
-    // @todo: Figure out if the data token is a raw string (has quotes), otherwise
-    // treat as signed float.
-    return false;
+    if ( Contains( LHS, StrLit[ 0 ] ) || Contains( RHS, StrLit[ 0 ] ) ) {
+        return LHS.compare( RHS );
+    }
+
+    stringstream ss{};
+    ss << LHS;
+    float a{};
+    ss >> a;
+    ss.clear();
+
+    ss << RHS;
+    float b{};
+    ss >> b;
+    ss.clear();
+
+    if ( a < b ) {
+        return -1;
+    } else if ( a == b ) {
+        return 0;
+    } else {
+        return 1;
+    }
 }
 
 int Min( int L, int R ) {
