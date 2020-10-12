@@ -16,15 +16,14 @@ const string WhitespaceTokens[] = { " ", "\t", "\n", "\r" };
 
 
 struct OToken {
-    const int Line;
-    const int Indent;
-    const string Token;
-
-    OToken( const int Line, const int Indent, const string& Token )
-        : Line( Line ), Indent( Indent ), Token( Token ) {}
-
-    operator const string& ( ) const { return Token; }
+    int Line{};
+    int Indent{};
+    string Token{};
 };
+
+OToken Make_OToken(const int Line, const int Indent, const string& Str ) {
+    return { Line, Indent, Str };
+}
 
 typedef OArray<OToken> TokenList;
 

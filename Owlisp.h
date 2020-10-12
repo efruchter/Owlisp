@@ -78,7 +78,7 @@ union OAtomData {
 struct OAtom {
     OAtomData PrimitiveData{};
     OAtomDataPrimitiveType PrimitiveType{};
-    string Token{};
+    OToken Token{};
 };
 
 struct OExpr {
@@ -103,9 +103,13 @@ OExprPtr EvalNamedFunction( OMachinePtr Machine, const OExprPtr Expr, const OExp
 
 OExprPtr Make_OExprPtr_Empty();
 OExprPtr Make_OExprPtr( const OExprType Type );
-OExprPtr Make_OExprPtr_Data( const string& Token );
+OExprPtr Make_OExprPtr_Data( const OToken& Token );
+OExprPtr Make_OExprPtr_Data( const OAtom& Atom, const string& Str );
 OIntrinsicPtr Make_OIntriniscPtr( const OExprType Type );
 OMachinePtr Make_OMachinePtr();
+
+OToken Make_OToken( const OAtom& Atom, const string& Str );
+OToken Make_OToken( const string& Str );
 
 OExprPtr ToOExpr_SingleNoEval( const TokenList& Tokens );
 
