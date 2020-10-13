@@ -228,7 +228,7 @@ void BuildIntrinsics( OMachinePtr Machine ) {
             Stream >> a;
             OExprPtr Result = Make_OExprPtr( OExprType::Data );
             stringstream SS{};
-            SS << std::sqrtf( a );
+            SS << sqrtf( a );
             Result->Atom.Token = Make_OToken( SS.str() );
             return Result;
         };

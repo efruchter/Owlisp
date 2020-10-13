@@ -6,6 +6,7 @@
 #include <assert.h>
 #include <vector>
 #include <iostream>
+#include <sstream>
 
 using namespace std;
 
@@ -61,7 +62,9 @@ bool IsWhiteSpace( const string& Token ) {
 template <typename T>
 T ParseTokenToPrimitive( const string& Token ) {
     T Out{};
-    stringstream{ Token } >> Out;
+	stringstream SS;
+	SS << Token;
+    SS >> Out;
     return Out;
 }
 
