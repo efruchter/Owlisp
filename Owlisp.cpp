@@ -26,7 +26,7 @@ int main( int argc, char* argv[] ) {
         Execute( Machine, Program );
         return 0;
     }
-    std::cerr << "Please use -1 for interpreter or a filename to run." << std::endl;
+    std::cerr << "Please use -i for interpreter or a filename to run." << std::endl;
     return 1;
 }
 
